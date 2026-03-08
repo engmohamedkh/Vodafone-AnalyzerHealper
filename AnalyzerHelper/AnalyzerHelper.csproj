@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>AnalyzerHelper</AssemblyName>
+    <RootNamespace>AnalyzerHelper</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.102.2" />
+  </ItemGroup>
+
+  <!-- Vodafone logo: add View/Assets/vodafone-logo.png and it will be copied to output -->
+  <ItemGroup Condition="Exists('View\Assets\vodafone-logo.png')">
+    <Content Include="View\Assets\vodafone-logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>View\Assets\vodafone-logo.png</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- No SDK/Vodafone reference: rules run inside this app (standard rules only) -->
+
+</Project>

@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Vodafone VOIS / brand style: red, white, dark gray -->
+    <Color x:Key="AccentColor">#E60000</Color>
+    <Color x:Key="AccentHoverColor">#CC0000</Color>
+    <Color x:Key="BackgroundColor">#F5F5F5</Color>
+    <Color x:Key="CardColor">#FFFFFF</Color>
+    <Color x:Key="TextPrimaryColor">#333333</Color>
+    <Color x:Key="TextSecondaryColor">#666666</Color>
+    <Color x:Key="AutoFixColor">#2E7D32</Color>
+    <Color x:Key="UserInputColor">#1565C0</Color>
+    <Color x:Key="BorderColor">#E0E0E0</Color>
+    <Color x:Key="HeaderTextColor">#FFFFFF</Color>
+
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}"/>
+    <SolidColorBrush x:Key="WindowBackground" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="CardBackground" Color="{StaticResource CardColor}"/>
+    <SolidColorBrush x:Key="TextPrimary" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="AutoFixBrush" Color="{StaticResource AutoFixColor}"/>
+    <SolidColorBrush x:Key="UserInputBrush" Color="{StaticResource UserInputColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="HeaderTextBrush" Color="{StaticResource HeaderTextColor}"/>
+</ResourceDictionary>
