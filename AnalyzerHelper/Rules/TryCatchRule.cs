@@ -62,10 +62,37 @@ namespace AnalyzerHelper.Rules
         public bool DefineAndFix(string filePath, string content, out string newContent)
         {
             newContent = content;
-            if (string.IsNullOrWhiteSpace(content) || content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (string.IsNullOrWhiteSpace(content))
                 return false;
 
-            // Check if file has Sequence or Flowchart (same check as in Check method)
+            bool hasTryCatch = content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool hasExceptionLogging = Regex.IsMatch(content, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+
+            // Case 2: TryCatch exists but exception logging is missing — add Log to first Catch
+            if (hasTryCatch && !hasExceptionLogging)
+            {
+                const string logActivity = @"<ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" />";
+                // Find first <Catch ...> (any attributes) and insert Log right after the opening tag
+                var catchOpenMatch = Regex.Match(content, @"<Catch\s[^>]*>", RegexOptions.IgnoreCase);
+                if (catchOpenMatch.Success)
+                {
+                    int insertAt = catchOpenMatch.Index + catchOpenMatch.Length;
+                    newContent = content.Substring(0, insertAt) + logActivity + content.Substring(insertAt);
+                    if (newContent.IndexOf("xmlns:ui=", StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        int actIdx = newContent.IndexOf("<Activity ", StringComparison.OrdinalIgnoreCase);
+                        if (actIdx >= 0)
+                            newContent = newContent.Substring(0, actIdx) + "<Activity xmlns:ui=\"http://schemas.uipath.com/workflow/activities\" " + newContent.Substring(actIdx + "<Activity ".Length);
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            // Case 1: No TryCatch — wrap root Sequence/Flowchart in TryCatch
+            if (hasTryCatch)
+                return false;
+
             bool hasSequenceOrFlowchart = content.IndexOf("Sequence", StringComparison.OrdinalIgnoreCase) >= 0
                 || content.IndexOf("Flowchart", StringComparison.OrdinalIgnoreCase) >= 0;
             if (!hasSequenceOrFlowchart)
@@ -75,16 +102,13 @@ namespace AnalyzerHelper.Rules
             if (tagName == null || startIdx < 0 || endIdx <= startIdx) return false;
 
             string inner = content.Substring(startIdx, endIdx - startIdx);
-            
-            // If self-closing tag, convert to full tag (e.g., <Sequence ... /> -> <Sequence ...></Sequence>)
+
             if (isSelfClosing)
             {
-                // Remove the trailing />
                 inner = inner.Substring(0, inner.Length - 2);
-                // Add closing tag
                 inner = inner + $"></{tagName}>";
             }
-            
+
             const string catchBlock = @"<Catch ExceptionType=""System.Exception"" DisplayName=""Catch""><ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" /></Catch>";
             string wrapped = $"<TryCatch><TryCatch.Try>{inner}</TryCatch.Try><TryCatch.Catches>{catchBlock}</TryCatch.Catches></TryCatch>";
             newContent = content.Substring(0, startIdx) + wrapped + content.Substring(endIdx);
@@ -141,32 +165,40 @@ namespace AnalyzerHelper.Rules
                 }
 
                 // Full tag: <Sequence>...</Sequence>
-                // Find the matching closing tag by tracking depth
+                // Find the matching closing tag by tracking depth. Only count real element opens
+                // (ignore <Sequence.Variables>, <Sequence.Something>, etc.).
                 int depth = 1;
                 int i = greaterThanIdx + 1;
                 string openTag = "<" + tag;
                 string closeTag = "</" + tag + ">";
-                
+                bool IsRealOpenTag(int idx)
+                {
+                    if (idx + openTag.Length >= content.Length) return false;
+                    char c = content[idx + openTag.Length];
+                    return c == ' ' || c == '>' || c == '/' || c == '\r' || c == '\n' || c == '\t';
+                }
+
                 while (i < content.Length)
                 {
                     int nextOpen = content.IndexOf(openTag, i, StringComparison.OrdinalIgnoreCase);
+                    while (nextOpen >= 0 && !IsRealOpenTag(nextOpen))
+                    {
+                        nextOpen = content.IndexOf(openTag, nextOpen + 1, StringComparison.OrdinalIgnoreCase);
+                    }
                     int nextClose = content.IndexOf(closeTag, i, StringComparison.OrdinalIgnoreCase);
-                    
-                    if (nextClose < 0) break; // No closing tag found
-                    
+
+                    if (nextClose < 0) break;
+
                     if (nextOpen >= 0 && nextOpen < nextClose)
                     {
-                        // Found nested opening tag
                         depth++;
                         i = nextOpen + openTag.Length;
                     }
                     else
                     {
-                        // Found closing tag
                         depth--;
                         if (depth == 0)
                         {
-                            // Found matching closing tag
                             int end = nextClose + closeTag.Length;
                             return (tag, start, end, false);
                         }

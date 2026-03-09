@@ -42,7 +42,7 @@ namespace VodafoneWorkFlowsCustomRules
             public IReadOnlyCollection<string> IgnoredFiles => Array.Empty<string>();
             public IReadOnlyCollection<string> TestCases => Array.Empty<string>();
             public IReadOnlyCollection<string> FileTemplates => Array.Empty<string>();
-            public IReadOnlyCollection<IFileModel> Templates => Array.Empty<IFileModel>();
+           // public IReadOnlyCollection<ITemplateModel> Templates => Array.Empty<ITemplateModel>();
             public IObjectBrowserSummary ObjectBrowserSummary => null;
             public string DisplayName => "";
 

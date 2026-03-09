@@ -70,7 +70,9 @@ namespace AnalyzerHelper.Rules
                     {
                         if (withFix.DefineAndFix(path, content, out string newContent))
                         {
-                            File.WriteAllText(path, newContent);
+                            // Only write if the file still exists at path (rule may have renamed it)
+                            if (File.Exists(path))
+                                File.WriteAllText(path, newContent);
                             applied = true;
                             message = "Fix applied.";
                         }
