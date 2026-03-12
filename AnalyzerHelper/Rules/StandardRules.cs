@@ -13,6 +13,7 @@ namespace AnalyzerHelper.Rules
             new RemoveDefaultsVarArgRule(),
             new HandleCommentedActivitiesRule(),
             new WorkflowFileNamingRule(),
+            new AnnotationRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;

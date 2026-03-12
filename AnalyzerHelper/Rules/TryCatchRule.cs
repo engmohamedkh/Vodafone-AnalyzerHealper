@@ -7,53 +7,48 @@ using AnalyzerHelper.Models;
 
 namespace AnalyzerHelper.Rules
 {
-    /// <summary>Checks that the workflow has TryCatch and proper exception handling. Auto-fix: adds TryCatch (No interaction).</summary>
+    /// <summary>Validates that each Catch block contains an info-message log (exception logging) and Rethrow. Auto-fix: adds missing Log and/or Rethrow.</summary>
     public sealed class TryCatchRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-012";
         public string RuleName => "TryCatch";
-        public string DefaultRecommendation => "Add TryCatch and log exception.source/exception.message. Keep activities inside try scope.";
+        public string DefaultRecommendation => "Each Catch must contain an info-message log (e.g. exception.source/exception.message) and a Rethrow activity.";
         public bool RequiresUserInteraction => false;
+
+        private const string LogActivity = @"<ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" />";
+        private const string RethrowActivity = @"<Rethrow DisplayName=""Rethrow"" />";
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
             var results = new List<RuleCheckResult>();
             if (string.IsNullOrWhiteSpace(content)) return results;
 
-            bool hasTryCatch = content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) >= 0;
-            bool hasSequenceOrFlowchart = content.IndexOf("Sequence", StringComparison.OrdinalIgnoreCase) >= 0
-                || content.IndexOf("Flowchart", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            if (!hasSequenceOrFlowchart)
+            if (content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) < 0)
                 return results;
 
-            if (!hasTryCatch)
+            var catchBlocks = FindCatchBlocks(content);
+            foreach (var (start, bodyStart, bodyEnd, end) in catchBlocks)
             {
-                results.Add(new RuleCheckResult
-                {
-                    RuleId = RuleId,
-                    RuleName = RuleName,
-                    Level = RuleLevel.Error,
-                    Message = "Workflow does not contain a TryCatch activity.",
-                    FilePath = filePath,
-                    Recommendation = DefaultRecommendation,
-                    RequiresUserInteraction = RequiresUserInteraction
-                });
-                return results;
-            }
+                string body = content.Substring(bodyStart, bodyEnd - bodyStart);
+                bool hasInfoLog = Regex.IsMatch(body, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+                bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
 
-            if (!Regex.IsMatch(content, "exception\\.(source|message)", RegexOptions.IgnoreCase))
-            {
-                results.Add(new RuleCheckResult
+                if (!hasInfoLog || !hasRethrow)
                 {
-                    RuleId = RuleId,
-                    RuleName = RuleName,
-                    Level = RuleLevel.Warning,
-                    Message = "TryCatch found but exception logging (exception.source/exception.message) may be missing.",
-                    FilePath = filePath,
-                    Recommendation = DefaultRecommendation,
-                    RequiresUserInteraction = RequiresUserInteraction
-                });
+                    var missing = new List<string>();
+                    if (!hasInfoLog) missing.Add("info-message log (exception.source/exception.message)");
+                    if (!hasRethrow) missing.Add("Rethrow");
+                    results.Add(new RuleCheckResult
+                    {
+                        RuleId = RuleId,
+                        RuleName = RuleName,
+                        Level = RuleLevel.Error,
+                        Message = "Catch block must contain info-message log and Rethrow. Missing: " + string.Join(", ", missing) + ".",
+                        FilePath = filePath,
+                        Recommendation = DefaultRecommendation,
+                        RequiresUserInteraction = RequiresUserInteraction
+                    });
+                }
             }
 
             return results;
@@ -62,151 +57,68 @@ namespace AnalyzerHelper.Rules
         public bool DefineAndFix(string filePath, string content, out string newContent)
         {
             newContent = content;
-            if (string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrWhiteSpace(content) || content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) < 0)
                 return false;
 
-            bool hasTryCatch = content.IndexOf("<TryCatch", StringComparison.OrdinalIgnoreCase) >= 0;
-            bool hasExceptionLogging = Regex.IsMatch(content, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+            var catchBlocks = FindCatchBlocks(content);
+            if (catchBlocks.Count == 0) return false;
 
-            // Case 2: TryCatch exists but exception logging is missing — add Log to first Catch
-            if (hasTryCatch && !hasExceptionLogging)
+            bool changed = false;
+            int offset = 0;
+            foreach (var (start, bodyStart, bodyEnd, end) in catchBlocks)
             {
-                const string logActivity = @"<ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" />";
-                // Find first <Catch ...> (any attributes) and insert Log right after the opening tag
-                var catchOpenMatch = Regex.Match(content, @"<Catch\s[^>]*>", RegexOptions.IgnoreCase);
-                if (catchOpenMatch.Success)
-                {
-                    int insertAt = catchOpenMatch.Index + catchOpenMatch.Length;
-                    newContent = content.Substring(0, insertAt) + logActivity + content.Substring(insertAt);
-                    if (newContent.IndexOf("xmlns:ui=", StringComparison.OrdinalIgnoreCase) < 0)
-                    {
-                        int actIdx = newContent.IndexOf("<Activity ", StringComparison.OrdinalIgnoreCase);
-                        if (actIdx >= 0)
-                            newContent = newContent.Substring(0, actIdx) + "<Activity xmlns:ui=\"http://schemas.uipath.com/workflow/activities\" " + newContent.Substring(actIdx + "<Activity ".Length);
-                    }
-                    return true;
-                }
-                return false;
+                int adjBodyStart = bodyStart + offset;
+                int adjBodyEnd = bodyEnd + offset;
+                int adjEnd = end + offset;
+                string body = newContent.Substring(adjBodyStart, adjBodyEnd - adjBodyStart);
+                bool hasInfoLog = Regex.IsMatch(body, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+                bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                string toInsertBeforeEnd = "";
+                if (!hasInfoLog) toInsertBeforeEnd += LogActivity;
+                if (!hasRethrow) toInsertBeforeEnd += RethrowActivity;
+                if (toInsertBeforeEnd.Length == 0) continue;
+
+                newContent = newContent.Substring(0, adjBodyEnd) + toInsertBeforeEnd + newContent.Substring(adjBodyEnd);
+                offset += toInsertBeforeEnd.Length;
+                changed = true;
             }
 
-            // Case 1: No TryCatch — wrap root Sequence/Flowchart in TryCatch
-            if (hasTryCatch)
-                return false;
-
-            bool hasSequenceOrFlowchart = content.IndexOf("Sequence", StringComparison.OrdinalIgnoreCase) >= 0
-                || content.IndexOf("Flowchart", StringComparison.OrdinalIgnoreCase) >= 0;
-            if (!hasSequenceOrFlowchart)
-                return false;
-
-            var (tagName, startIdx, endIdx, isSelfClosing) = FindRootActivity(content);
-            if (tagName == null || startIdx < 0 || endIdx <= startIdx) return false;
-
-            string inner = content.Substring(startIdx, endIdx - startIdx);
-
-            if (isSelfClosing)
-            {
-                inner = inner.Substring(0, inner.Length - 2);
-                inner = inner + $"></{tagName}>";
-            }
-
-            const string catchBlock = @"<Catch ExceptionType=""System.Exception"" DisplayName=""Catch""><ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" /></Catch>";
-            string wrapped = $"<TryCatch><TryCatch.Try>{inner}</TryCatch.Try><TryCatch.Catches>{catchBlock}</TryCatch.Catches></TryCatch>";
-            newContent = content.Substring(0, startIdx) + wrapped + content.Substring(endIdx);
-
-            if (newContent.IndexOf("xmlns:ui=", StringComparison.OrdinalIgnoreCase) < 0)
+            if (changed && newContent.IndexOf("xmlns:ui=", StringComparison.OrdinalIgnoreCase) < 0)
             {
                 int actIdx = newContent.IndexOf("<Activity ", StringComparison.OrdinalIgnoreCase);
                 if (actIdx >= 0)
                     newContent = newContent.Substring(0, actIdx) + "<Activity xmlns:ui=\"http://schemas.uipath.com/workflow/activities\" " + newContent.Substring(actIdx + "<Activity ".Length);
             }
-            return true;
+            return changed;
         }
 
-        private static (string? tagName, int startIdx, int endIdx, bool isSelfClosing) FindRootActivity(string content)
+        /// <summary>Returns (catchStart, bodyStart, bodyEnd, catchEnd) for each Catch block.</summary>
+        private static List<(int catchStart, int bodyStart, int bodyEnd, int catchEnd)> FindCatchBlocks(string content)
         {
-            // Find the Activity tag to locate root-level children
-            int activityStart = content.IndexOf("<Activity", StringComparison.OrdinalIgnoreCase);
-            if (activityStart < 0) return (null, -1, -1, false);
-            
-            // Find where Activity tag ends (either > or />)
-            int activityTagEnd = content.IndexOf('>', activityStart);
-            if (activityTagEnd < 0) return (null, -1, -1, false);
-            
-            // Start searching after the Activity opening tag
-            int searchStart = activityTagEnd + 1;
-
-            foreach (var tag in new[] { "Sequence", "Flowchart" })
+            var list = new List<(int, int, int, int)>();
+            int i = 0;
+            while (i < content.Length)
             {
-                // Find the first occurrence of the tag after Activity opens
-                int start = content.IndexOf("<" + tag, searchStart, StringComparison.OrdinalIgnoreCase);
-                if (start < 0) continue;
-
-                // Verify this is actually a tag start (not part of another tag name or attribute)
-                // Check that it's followed by whitespace, >, or / (for self-closing)
-                if (start + ("<" + tag).Length < content.Length)
+                int catchOpen = content.IndexOf("<Catch", i, StringComparison.OrdinalIgnoreCase);
+                if (catchOpen < 0) break;
+                int afterCatch = catchOpen + 6;
+                if (afterCatch >= content.Length) break;
+                char c = content[afterCatch];
+                if (c != ' ' && c != '>')
                 {
-                    char nextChar = content[start + ("<" + tag).Length];
-                    if (nextChar != ' ' && nextChar != '>' && nextChar != '/' && nextChar != '\r' && nextChar != '\n' && nextChar != '\t')
-                        continue;
+                    i = afterCatch;
+                    continue;
                 }
-
-                // Check if this is a self-closing tag (e.g., <Sequence DisplayName="Main" />)
-                int tagEnd = start + ("<" + tag).Length;
-                // Find the end of the tag (either > or />)
-                int greaterThanIdx = content.IndexOf('>', tagEnd);
-                if (greaterThanIdx < 0) continue;
-
-                // Check if it's self-closing
-                if (greaterThanIdx > 0 && content[greaterThanIdx - 1] == '/')
-                {
-                    // Self-closing tag: <Sequence ... />
-                    int end = greaterThanIdx + 1;
-                    return (tag, start, end, true);
-                }
-
-                // Full tag: <Sequence>...</Sequence>
-                // Find the matching closing tag by tracking depth. Only count real element opens
-                // (ignore <Sequence.Variables>, <Sequence.Something>, etc.).
-                int depth = 1;
-                int i = greaterThanIdx + 1;
-                string openTag = "<" + tag;
-                string closeTag = "</" + tag + ">";
-                bool IsRealOpenTag(int idx)
-                {
-                    if (idx + openTag.Length >= content.Length) return false;
-                    char c = content[idx + openTag.Length];
-                    return c == ' ' || c == '>' || c == '/' || c == '\r' || c == '\n' || c == '\t';
-                }
-
-                while (i < content.Length)
-                {
-                    int nextOpen = content.IndexOf(openTag, i, StringComparison.OrdinalIgnoreCase);
-                    while (nextOpen >= 0 && !IsRealOpenTag(nextOpen))
-                    {
-                        nextOpen = content.IndexOf(openTag, nextOpen + 1, StringComparison.OrdinalIgnoreCase);
-                    }
-                    int nextClose = content.IndexOf(closeTag, i, StringComparison.OrdinalIgnoreCase);
-
-                    if (nextClose < 0) break;
-
-                    if (nextOpen >= 0 && nextOpen < nextClose)
-                    {
-                        depth++;
-                        i = nextOpen + openTag.Length;
-                    }
-                    else
-                    {
-                        depth--;
-                        if (depth == 0)
-                        {
-                            int end = nextClose + closeTag.Length;
-                            return (tag, start, end, false);
-                        }
-                        i = nextClose + closeTag.Length;
-                    }
-                }
+                int tagEnd = content.IndexOf('>', catchOpen);
+                if (tagEnd < 0) break;
+                int bodyStart = tagEnd + 1;
+                int catchClose = content.IndexOf("</Catch>", bodyStart, StringComparison.OrdinalIgnoreCase);
+                if (catchClose < 0) break;
+                list.Add((catchOpen, bodyStart, catchClose, catchClose + "</Catch>".Length));
+                i = catchClose + 1;
             }
-            return (null, -1, -1, false);
+            return list;
         }
     }
 }
