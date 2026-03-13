@@ -14,6 +14,7 @@ namespace AnalyzerHelper.Rules
             new HandleCommentedActivitiesRule(),
             new WorkflowFileNamingRule(),
             new AnnotationRule(),
+            new BranchesLogsRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;
