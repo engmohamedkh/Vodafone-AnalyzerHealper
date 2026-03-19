@@ -10,7 +10,7 @@ namespace AnalyzerHelper.Rules
 {
     /// <summary>
     /// Validates that FlowDecision (True/False) and FlowSwitch (Default and Cases) branches
-    /// contain an Info_Log or Message_Log activity. Fix requires user interaction: shows a dialog
+    /// contain an Info_Log, Message_Log, or Error_Log activity. Fix requires user interaction: shows a dialog
     /// with branch details and message input per branch, then inserts Info_Log with the user message.
     /// Reference: VodafoneWorkFlowsCustomRules/WorflowsBranchesLogMessages.cs and
     /// VodafoneActivitiesCustomRules/BranchesLogMessages.cs.
@@ -19,11 +19,11 @@ namespace AnalyzerHelper.Rules
     {
         public string RuleId => "VF-038";
         public string RuleName => "Branches Logging";
-        public string DefaultRecommendation => "Add Info Log or Message Log at the beginning of every branch. Use Fix to add Info Log with your message.";
+        public string DefaultRecommendation => "Add Info Log, Message Log, or Error Log at the beginning of every branch. Use Fix to add Info Log with your message.";
         public bool RequiresUserInteraction => true;
 
-        /// <summary>Branch meets the rule if it contains either Info_Log or Message_Log.</summary>
-        private static readonly Regex LogActivityPattern = new Regex(@"<\w+:(Info_Log|Message_Log)\s", RegexOptions.IgnoreCase);
+        /// <summary>Branch meets the rule if it contains Info_Log, Message_Log, or Error_Log.</summary>
+        private static readonly Regex LogActivityPattern = new Regex(@"<\w+:(Info_Log|Message_Log|Error_Log)\s", RegexOptions.IgnoreCase);
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
@@ -93,7 +93,7 @@ namespace AnalyzerHelper.Rules
             return true;
         }
 
-        /// <summary>True if branch contains an Info_Log or Message_Log activity.</summary>
+        /// <summary>True if branch contains an Info_Log, Message_Log, or Error_Log activity.</summary>
         private static bool HasLogActivity(string branchContent)
         {
             return LogActivityPattern.IsMatch(branchContent);
@@ -119,11 +119,11 @@ namespace AnalyzerHelper.Rules
 
                 var trueMatch = Regex.Match(block, @"<FlowDecision\.True[^>]*>(.*?)</FlowDecision\.True>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 if (trueMatch.Success && !HasLogActivity(trueMatch.Groups[1].Value))
-                    list.Add($"FlowDecision '{displayName}' – True branch has no Info Log or Message Log.");
+                    list.Add($"FlowDecision '{displayName}' – True branch has no Info Log, Message Log, or Error Log.");
 
                 var falseMatch = Regex.Match(block, @"<FlowDecision\.False[^>]*>(.*?)</FlowDecision\.False>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 if (falseMatch.Success && !HasLogActivity(falseMatch.Groups[1].Value))
-                    list.Add($"FlowDecision '{displayName}' – False branch has no Info Log or Message Log.");
+                    list.Add($"FlowDecision '{displayName}' – False branch has no Info Log, Message Log, or Error Log.");
             }
 
             // FlowSwitch: Default and Cases
@@ -135,7 +135,7 @@ namespace AnalyzerHelper.Rules
 
                 var defaultMatch = Regex.Match(block, @"<FlowSwitch\.Default[^>]*>(.*?)</FlowSwitch\.Default>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 if (defaultMatch.Success && !HasLogActivity(defaultMatch.Groups[1].Value))
-                    list.Add($"FlowSwitch '{displayName}' – Default branch has no Info Log or Message Log.");
+                    list.Add($"FlowSwitch '{displayName}' – Default branch has no Info Log, Message Log, or Error Log.");
 
                 var caseMatches = Regex.Matches(block, @"<FlowStep\s+x:Key\s*=\s*[""'][^""']*[""'][^>]*>(.*?)</FlowStep>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 int caseIndex = 0;
@@ -145,7 +145,7 @@ namespace AnalyzerHelper.Rules
                     {
                         var keyMatch = Regex.Match(caseMatch.Value, @"x:Key\s*=\s*[""']([^""']*)[""']", RegexOptions.IgnoreCase);
                         string key = keyMatch.Success ? keyMatch.Groups[1].Value : caseIndex.ToString();
-                        list.Add($"FlowSwitch '{displayName}' – Case '{key}' has no Info Log or Message Log.");
+                        list.Add($"FlowSwitch '{displayName}' – Case '{key}' has no Info Log, Message Log, or Error Log.");
                     }
                     caseIndex++;
                 }
@@ -160,11 +160,11 @@ namespace AnalyzerHelper.Rules
 
                 var thenMatch = Regex.Match(block, @"<If\.Then[^>]*>(.*?)</If\.Then>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 if (thenMatch.Success && !HasLogActivity(thenMatch.Groups[1].Value))
-                    list.Add($"If '{displayName}' – Then branch has no Info Log or Message Log.");
+                    list.Add($"If '{displayName}' – Then branch has no Info Log, Message Log, or Error Log.");
 
                 var elseMatch = Regex.Match(block, @"<If\.Else[^>]*>(.*?)</If\.Else>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 if (elseMatch.Success && !HasLogActivity(elseMatch.Groups[1].Value))
-                    list.Add($"If '{displayName}' – Else branch has no Info Log or Message Log.");
+                    list.Add($"If '{displayName}' – Else branch has no Info Log, Message Log, or Error Log.");
             }
 
             return list;

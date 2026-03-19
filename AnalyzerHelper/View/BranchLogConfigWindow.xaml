@@ -43,8 +43,8 @@
 
             <Border Grid.Row="0" Background="{StaticResource AccentBrush}" CornerRadius="7,7,0,0" Padding="20,14">
                 <StackPanel>
-                    <TextBlock Text="Branches missing Info Log or Message Log" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
-                    <TextBlock Text="Branches must start with Info_Log or Message_Log. Enter a message for each branch below; it will be added as an Info_Log at the start." FontSize="12" Foreground="White" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Text="Branches missing Info Log, Message Log, or Error Log" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBlock Text="Branches must start with Info_Log, Message_Log, or Error_Log. Enter a message for each branch below; it will be added as an Info_Log at the start." FontSize="12" Foreground="White" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
