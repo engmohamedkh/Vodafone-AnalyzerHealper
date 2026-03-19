@@ -17,7 +17,7 @@ namespace AnalyzerHelper.Rules
     /// </summary>
     public sealed class BranchesLogsRule : IAnalyzerRuleWithFix
     {
-        public string RuleId => "VF-038";
+        public string RuleId => "VF-038"; 
         public string RuleName => "Branches Logging";
         public string DefaultRecommendation => "Add Info Log, Message Log, or Error Log at the beginning of every branch. Use Fix to add Info Log with your message.";
         public bool RequiresUserInteraction => true;
