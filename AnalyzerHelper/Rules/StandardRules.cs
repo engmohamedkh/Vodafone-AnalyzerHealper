@@ -19,6 +19,8 @@ namespace AnalyzerHelper.Rules
             new SyncInvokeArgumentsRule(),
             new FixComponentNameRule(),
             new AddRetryScopeCheckTrueRule(),
+            new FlowchartOrphanNodesRule(),
+            new CetTimeZoneRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;
