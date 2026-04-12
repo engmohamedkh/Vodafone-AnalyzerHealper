@@ -988,10 +988,27 @@ namespace AnalyzerHelper.View
                 var rules = RoleFixRegistry.GetRulesByIds(selectedRules.Select(r => r.RuleId));
                 var filePaths = selectedFiles.Select(f => f.FullPath).ToList();
                 var fixResults = FixRunner.ApplyFix(filePaths, rules, userConfirmed: null); // run without pre-confirmations
+
+                if (CategoryTabs.SelectedItem is TabItem autoFixTab && autoFixTab == TabNoInteraction)
+                {
+                    bool anyApplied = fixResults.Any(r => r.Applied);
+                    bool anyFailure = fixResults.Any(IsAutofixRunFailure);
+                    bool allBenignOrApplied = fixResults.Count > 0 &&
+                        fixResults.All(r => r.Applied || IsAutofixNoChangeMessage(r.Message));
+                    if (anyApplied && !anyFailure && allBenignOrApplied)
+                    {
+                        System.Windows.MessageBox.Show(
+                            "The selected rule(s) were fixed successfully.",
+                            "Apply Fix",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                }
+
                 var appliedResults = fixResults.Where(r => r.Applied).ToList();
                 var appliedCount = appliedResults.Count;
                 var withMessage = fixResults.Where(r => !r.Applied && !string.IsNullOrEmpty(r.Message)).ToList();
-                
+
                 // --- Apply Fix Results dialog (commented out) ---
                 // var summary = appliedCount > 0
                 //     ? $"Fix successfully applied to {appliedCount} finding(s) across {appliedResults.Select(r => r.FilePath).Distinct().Count()} file(s)."
@@ -1079,6 +1096,14 @@ namespace AnalyzerHelper.View
         // =====================================================================
         //  Helpers
         // =====================================================================
+
+        /// <summary>DefineAndFix returned without changing the file (expected for some rule×file pairs).</summary>
+        private static bool IsAutofixNoChangeMessage(string? message) =>
+            string.Equals(message?.Trim(), "No change (rule did not apply fix).", StringComparison.Ordinal);
+
+        /// <summary>True when a fix attempt did not apply and was not a benign no-op (read errors, exceptions, etc.).</summary>
+        private static bool IsAutofixRunFailure(FixRunner.FixResult r) =>
+            !r.Applied && !IsAutofixNoChangeMessage(r.Message);
 
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
