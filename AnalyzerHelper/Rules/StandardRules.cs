@@ -15,6 +15,8 @@ namespace AnalyzerHelper.Rules
             new WorkflowFileNamingRule(),
             new AnnotationRule(),
             new BranchesLogsRule(),
+            new UnusedWorkflowFilesRule(),
+            new FlowchartOrphanNodesRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;
