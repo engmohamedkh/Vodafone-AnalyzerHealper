@@ -10,6 +10,7 @@ namespace AnalyzerHelper.Rules
         private static readonly IAnalyzerRule[] AllRules =
         {
             new TryCatchRule(),
+            new CetTimeZoneRule(),
             new RemoveDefaultsVarArgRule(),
             new HandleCommentedActivitiesRule(),
             new WorkflowFileNamingRule(),
