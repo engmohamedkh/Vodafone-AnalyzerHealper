@@ -24,7 +24,18 @@ namespace AnalyzerHelper.Rules
             Func<IAnalyzerRule, string, bool>? userConfirmed = null)
         {
             var results = new List<FixResult>();
-            foreach (var path in filePaths ?? Array.Empty<string>())
+
+            // Pre-flight batch processing for rules that support it
+            var paths = filePaths ?? Array.Empty<string>();
+            foreach (var rule in rules ?? Array.Empty<IAnalyzerRule>())
+            {
+                if (rule is IBatchAnalyzerRuleWithFix batchRule)
+                {
+                    batchRule.PrepareBatch(paths);
+                }
+            }
+
+            foreach (var path in paths)
             {
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 {
@@ -48,18 +59,15 @@ namespace AnalyzerHelper.Rules
                     if (rule is not IAnalyzerRuleWithFix withFix)
                         continue;
 
-                    // For need-interaction rules: only show confirmation for files that have findings
-                    if (rule.RequiresUserInteraction)
+                    // For batch rules, PrepareBatch already handled interaction —
+                    // call DefineAndFix on ALL files (not just ones with Check findings).
+                    // For non-batch interaction rules, still gate on Check results.
+                    if (rule.RequiresUserInteraction && rule is not IBatchAnalyzerRuleWithFix)
                     {
                         var checkResults = rule.Check(path, content);
                         if (checkResults.Count == 0)
                         {
                             results.Add(new FixResult { RuleId = rule.RuleId, RuleName = rule.RuleName, FilePath = path, Message = "No findings in file." });
-                            continue;
-                        }
-                        if (userConfirmed?.Invoke(rule, path) != true)
-                        {
-                            results.Add(new FixResult { RuleId = rule.RuleId, RuleName = rule.RuleName, FilePath = path, Message = "User did not confirm." });
                             continue;
                         }
                     }

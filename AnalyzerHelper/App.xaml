@@ -7,9 +7,12 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="View/Themes/Colors.xaml"/>
+                <ResourceDictionary Source="View/Themes/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <conv:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
             <conv:InverseBooleanToVisibilityConverter x:Key="BoolToVisibilityInverse"/>
+            <conv:BoolToFixedTextConverter x:Key="BoolToFixedText"/>
+            <conv:BoolToFontWeightConverter x:Key="BoolToFontWeight"/>
             <!-- Vodafone style – medium size buttons -->
             <Style TargetType="Button" x:Key="PrimaryButton">
                 <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
@@ -34,10 +37,12 @@
                 <Setter Property="FontSize" Value="13"/>
             </Style>
             <Style TargetType="ListBoxItem" x:Key="RoleFixItemStyle">
-                <Setter Property="Padding" Value="16,12"/>
-                <Setter Property="Margin" Value="0,0,0,8"/>
+                <Setter Property="Padding" Value="6,4"/>
+                <Setter Property="Margin" Value="0,0,0,1"/>
                 <Setter Property="Background" Value="{StaticResource CardBackground}"/>
                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                <Setter Property="BorderBrush" Value="#F0F0F0"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

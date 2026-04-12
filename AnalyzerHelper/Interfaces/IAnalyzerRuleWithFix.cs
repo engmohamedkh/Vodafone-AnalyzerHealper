@@ -8,4 +8,9 @@ namespace AnalyzerHelper.Interfaces
     {
         bool DefineAndFix(string filePath, string content, out string newContent);
     }
+
+    public interface IBatchAnalyzerRuleWithFix : IAnalyzerRuleWithFix
+    {
+        void PrepareBatch(System.Collections.Generic.IReadOnlyList<string> filePaths);
+    }
 }

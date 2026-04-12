@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using System.Xml;
 using System.Xml.Linq;
 using AnalyzerHelper.Interfaces;
@@ -17,8 +18,11 @@ namespace AnalyzerHelper.Rules
 	/// Logic: {ShortName}_{WorkflowName}.xaml (path must contain a directory named "Logic"); IAP files are skipped.
 	/// On violation reported as Error so run shows errors and user must fix via interaction (Fix tab → confirm → dialog for ShortName/ProcessStage, then rename and update x:Class/DisplayName).
 	/// Logic from OldAnalyzerHelper.RenameWorkflowFilesAction.
+	///
+	/// Batch mode: shows ONE config dialog for ShortName/ProcessStage, then renames all files at once
+	/// and updates WorkflowFileName references across all XAML files in the project.
 	/// </summary>
-	public sealed class WorkflowFileNamingRule : IAnalyzerRuleWithFix
+	public sealed class WorkflowFileNamingRule : IBatchAnalyzerRuleWithFix
 	{
 		public string RuleId => "VF-015";
 		public string RuleName => "WorkflowFileNaming";
@@ -27,6 +31,14 @@ namespace AnalyzerHelper.Rules
 		public bool RequiresUserInteraction => true;
 
 		private static readonly XNamespace XNs = "http://schemas.microsoft.com/winfx/2006/xaml";
+
+		// ── Batch state ───────────────────────────────────────────────────
+		private string? _batchShortName;
+		private string? _batchProcessStage;
+		private bool _batchPrepared;
+		private bool _batchCancelled;
+		private string _batchRootFolder = "";
+		private Dictionary<string, string> _renameMap = new(); // oldPath → newStem
 
 		public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
 		{
@@ -122,9 +134,65 @@ namespace AnalyzerHelper.Rules
 			return results;
 		}
 
+		// =====================================================================
+		//  PrepareBatch — single dialog, pre-compute all renames
+		// =====================================================================
+		public void PrepareBatch(IReadOnlyList<string> filePaths)
+		{
+			_batchPrepared = false;
+			_batchCancelled = false;
+			_batchShortName = null;
+			_batchProcessStage = null;
+			_renameMap.Clear();
+
+			// Check if any files actually need renaming
+			bool hasSubprocess = filePaths.Any(IsInSubprocessFolder);
+			var dialog = new RenameConfigWindow(requireStage: hasSubprocess);
+			if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.ShortName))
+			{
+				_batchCancelled = true;
+				return;
+			}
+
+			_batchShortName = dialog.ShortName.Trim();
+			_batchProcessStage = dialog.ProcessStage?.Trim() ?? "";
+			_batchPrepared = true;
+
+			// Find root folder for reference updates (common parent of all files)
+			_batchRootFolder = FindCommonRoot(filePaths);
+
+			// Pre-compute all rename mappings — include ALL files under Subprocess/Logic
+			foreach (var path in filePaths)
+			{
+				if (string.IsNullOrWhiteSpace(path) || !path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				bool isSubprocess = IsInSubprocessFolder(path);
+				bool isLogic = IsInLogicFolder(path);
+				if (!isSubprocess && !isLogic) continue;
+
+				string fileName = Path.GetFileNameWithoutExtension(path);
+
+				// IAP files are not renamed (per convention)
+				if (isLogic && fileName.StartsWith("IAP", StringComparison.OrdinalIgnoreCase)) continue;
+
+				string workflowName = ExtractWorkflowName(fileName, isSubprocess);
+				string newStem = isSubprocess
+					? $"{_batchShortName}_{_batchProcessStage}_{workflowName}"
+					: $"{_batchShortName}_{workflowName}";
+
+				if (!fileName.Equals(newStem, StringComparison.OrdinalIgnoreCase))
+					_renameMap[path] = newStem;
+			}
+		}
+
+		// =====================================================================
+		//  DefineAndFix — uses batch config, renames + updates references
+		// =====================================================================
 		public bool DefineAndFix(string filePath, string content, out string newContent)
 		{
 			newContent = content;
+			if (_batchCancelled) return false;
 			if (string.IsNullOrWhiteSpace(filePath) || !filePath.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
 				return false;
 
@@ -137,17 +205,29 @@ namespace AnalyzerHelper.Rules
 
 			string fileName = Path.GetFileNameWithoutExtension(filePath);
 
-			// Logic: skip IAP files
+			// IAP files are not renamed (per convention)
 			if (isLogic && fileName.StartsWith("IAP", StringComparison.OrdinalIgnoreCase))
 				return false;
 
-			// Subprocess: request ShortName and Stage; Logic: request ShortName only
-			var dialog = new RenameConfigWindow(requireStage: isSubprocess);
-			if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.ShortName))
-				return false;
+			string shortName;
+			string processStage;
 
-			string shortName = dialog.ShortName.Trim();
-			string processStage = isSubprocess ? (dialog.ProcessStage?.Trim() ?? "") : "";
+			if (_batchPrepared)
+			{
+				// Use batch config — no per-file dialog
+				shortName = _batchShortName ?? "";
+				processStage = _batchProcessStage ?? "";
+			}
+			else
+			{
+				// Fallback: single-file mode
+				var dialog = new RenameConfigWindow(requireStage: isSubprocess);
+				if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.ShortName))
+					return false;
+
+				shortName = dialog.ShortName.Trim();
+				processStage = isSubprocess ? (dialog.ProcessStage?.Trim() ?? "") : "";
+			}
 
 			// Extract workflow name from current file name
 			string workflowName = ExtractWorkflowName(fileName, isSubprocess);
@@ -191,6 +271,9 @@ namespace AnalyzerHelper.Rules
 				// Rename to convention: ShortName_Stage_WorkflowName.xaml (or ShortName_WorkflowName for Logic)
 				if (!string.Equals(filePath, newPath, StringComparison.OrdinalIgnoreCase))
 					File.Move(filePath, newPath);
+
+				// ── Update WorkflowFileName references across all XAML files in project ──
+				UpdateWorkflowFileReferences(filePath, newPath);
 			}
 			catch
 			{
@@ -200,6 +283,100 @@ namespace AnalyzerHelper.Rules
 
 			newContent = updatedContent;
 			return true;
+		}
+
+		// =====================================================================
+		//  Update WorkflowFileName references across all XAML files
+		// =====================================================================
+		private void UpdateWorkflowFileReferences(string oldFilePath, string newFilePath)
+		{
+			// Build the relative paths as used in WorkflowFileName attributes
+			// e.g. "Subprocess\OldName.xaml" → "Subprocess\NewName.xaml"
+			string oldFileName = Path.GetFileName(oldFilePath);
+			string newFileName = Path.GetFileName(newFilePath);
+			string parentFolder = Path.GetFileName(Path.GetDirectoryName(oldFilePath) ?? "");
+
+			// Patterns to find and replace (both slash directions)
+			string oldRef1 = $"{parentFolder}\\{oldFileName}";
+			string oldRef2 = $"{parentFolder}/{oldFileName}";
+			string newRef1 = $"{parentFolder}\\{newFileName}";
+			string newRef2 = $"{parentFolder}/{newFileName}";
+
+			// Determine the project root to scan
+			string rootToScan = _batchRootFolder;
+			if (string.IsNullOrEmpty(rootToScan))
+				rootToScan = Path.GetDirectoryName(Path.GetDirectoryName(oldFilePath) ?? "") ?? "";
+
+			if (string.IsNullOrEmpty(rootToScan) || !Directory.Exists(rootToScan))
+				return;
+
+			// Scan all .xaml files in the project
+			try
+			{
+				var allXaml = Directory.GetFiles(rootToScan, "*.xaml", SearchOption.AllDirectories);
+				foreach (var xamlPath in allXaml)
+				{
+					// Don't re-process the file we just renamed
+					if (string.Equals(xamlPath, newFilePath, StringComparison.OrdinalIgnoreCase))
+						continue;
+					if (string.Equals(xamlPath, oldFilePath, StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					try
+					{
+						string xamlContent = File.ReadAllText(xamlPath);
+						bool modified = false;
+
+						// Replace WorkflowFileName references
+						if (xamlContent.Contains(oldRef1, StringComparison.OrdinalIgnoreCase))
+						{
+							xamlContent = xamlContent.Replace(oldRef1, newRef1, StringComparison.OrdinalIgnoreCase);
+							modified = true;
+						}
+						if (xamlContent.Contains(oldRef2, StringComparison.OrdinalIgnoreCase))
+						{
+							xamlContent = xamlContent.Replace(oldRef2, newRef2, StringComparison.OrdinalIgnoreCase);
+							modified = true;
+						}
+
+						// Also replace bare filename references (without folder prefix)
+						if (xamlContent.Contains(oldFileName, StringComparison.OrdinalIgnoreCase))
+						{
+							// Only replace in WorkflowFileName attributes to be safe
+							string pattern1 = $"WorkflowFileName=\"{oldFileName}\"";
+							string replacement1 = $"WorkflowFileName=\"{newFileName}\"";
+							if (xamlContent.Contains(pattern1, StringComparison.OrdinalIgnoreCase))
+							{
+								xamlContent = xamlContent.Replace(pattern1, replacement1, StringComparison.OrdinalIgnoreCase);
+								modified = true;
+							}
+						}
+
+						if (modified)
+							File.WriteAllText(xamlPath, xamlContent);
+					}
+					catch { /* skip unreadable/unwritable files */ }
+				}
+			}
+			catch { /* skip if directory scan fails */ }
+		}
+
+		// =====================================================================
+		//  Helpers
+		// =====================================================================
+
+		/// <summary>Finds a root folder common to all paths.</summary>
+		private static string FindCommonRoot(IReadOnlyList<string> paths)
+		{
+			if (paths == null || paths.Count == 0) return "";
+			var first = Path.GetDirectoryName(paths[0]) ?? "";
+			foreach (var p in paths)
+			{
+				var dir = Path.GetDirectoryName(p) ?? "";
+				while (!string.IsNullOrEmpty(first) && !dir.StartsWith(first, StringComparison.OrdinalIgnoreCase))
+					first = Path.GetDirectoryName(first) ?? "";
+			}
+			return first;
 		}
 
 		/// <summary>True if filePath lies under a directory named exactly "Subprocess" (path segment).</summary>

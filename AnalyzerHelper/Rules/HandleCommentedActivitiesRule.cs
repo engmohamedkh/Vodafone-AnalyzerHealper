@@ -17,7 +17,7 @@ namespace AnalyzerHelper.Rules
     /// Fix shows a dialog to choose per activity: Delete or Uncomment (or Keep).
     /// Logic from OldAnalyzerHelper.RemoveCommentedActivitiesAction.
     /// </summary>
-    public sealed class HandleCommentedActivitiesRule : IAnalyzerRuleWithFix
+    public sealed class HandleCommentedActivitiesRule : IBatchAnalyzerRuleWithFix
     {
         public string RuleId => "VF-014";
         public string RuleName => "HandleCommentedActivities";
@@ -56,23 +56,95 @@ namespace AnalyzerHelper.Rules
             return results;
         }
 
+        private Dictionary<string, List<CommentItem>> _batchItems = null;
+        private bool _batchCancelled = false;
+
+        /// <summary>Finds a root folder common to all paths for relative display.</summary>
+        private static string FindCommonRoot(IReadOnlyList<string> paths)
+        {
+            if (paths == null || paths.Count == 0) return "";
+            var first = Path.GetDirectoryName(paths[0]) ?? "";
+            foreach (var p in paths)
+            {
+                var dir = Path.GetDirectoryName(p) ?? "";
+                while (!string.IsNullOrEmpty(first) && !dir.StartsWith(first, StringComparison.OrdinalIgnoreCase))
+                    first = Path.GetDirectoryName(first) ?? "";
+            }
+            return first;
+        }
+
+        public void PrepareBatch(IReadOnlyList<string> filePaths)
+        {
+            _batchItems = new Dictionary<string, List<CommentItem>>();
+            _batchCancelled = false;
+            var allItems = new List<CommentItem>();
+            string rootFolder = FindCommonRoot(filePaths);
+
+            foreach (var path in filePaths)
+            {
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) continue;
+                try
+                {
+                    var content = File.ReadAllText(path);
+                    var doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace);
+                    var items = ScanContent(doc, path, rootFolder);
+                    if (items.Count > 0)
+                        allItems.AddRange(items);
+                }
+                catch { }
+            }
+
+            if (allItems.Count > 0)
+            {
+                var dialog = new CommentReviewWindow(allItems, "Batch Review");
+                bool? result = dialog.ShowDialog();
+
+                // If user cancelled or closed the dialog, don't apply anything
+                if (result != true || !dialog.Applied)
+                {
+                    _batchCancelled = true;
+                    _batchItems = null;
+                    return;
+                }
+
+                foreach (var item in allItems)
+                {
+                    if (!_batchItems.ContainsKey(item.FilePath))
+                        _batchItems[item.FilePath] = new List<CommentItem>();
+                    _batchItems[item.FilePath].Add(item);
+                }
+            }
+        }
+
         public bool DefineAndFix(string filePath, string content, out string newContent)
         {
             newContent = content;
+            if (_batchCancelled) return false;
             if (string.IsNullOrWhiteSpace(content)) return false;
 
             XDocument doc;
             try { doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace); }
             catch { return false; }
 
-            var items = ScanContent(doc, filePath);
-            if (items.Count == 0) return false;
+            List<CommentItem> items;
+            if (_batchItems != null)
+            {
+                if (!_batchItems.TryGetValue(filePath, out items))
+                    return false;
+            }
+            else
+            {
+                items = ScanContent(doc, filePath, Path.GetDirectoryName(filePath) ?? "");
+                if (items.Count == 0) return false;
 
-            var dialog = new CommentReviewWindow(items, filePath);
-            if (dialog.ShowDialog() != true) return false;
+                var dialog = new CommentReviewWindow(items, filePath);
+                if (dialog.ShowDialog() != true) return false;
+            }
 
             bool changed = false;
-            foreach (var item in items)
+            // Sort deepest-first so nested CommentOut elements are handled before their parents
+            var sorted = items.OrderByDescending(i => i.Depth).ToList();
+            foreach (var item in sorted)
             {
                 if (item.ChosenAction == CommentAction.Keep) continue;
                 var coEl = FindCommentOutByIdRef(doc, item.IdRef);
@@ -104,8 +176,12 @@ namespace AnalyzerHelper.Rules
 
         // ── Scan (build items from document) ──────────────────────────────────
 
-        private static List<CommentItem> ScanContent(XDocument doc, string filePath)
+        private static List<CommentItem> ScanContent(XDocument doc, string filePath, string rootFolder)
         {
+            string rel = !string.IsNullOrEmpty(rootFolder) && filePath.StartsWith(rootFolder, StringComparison.OrdinalIgnoreCase)
+                ? filePath.Substring(rootFolder.Length).TrimStart(Path.DirectorySeparatorChar, '/', '\\')
+                : Path.GetFileName(filePath);
+
             var result = new List<CommentItem>();
             foreach (var el in doc.Descendants(CoName))
             {
@@ -113,18 +189,30 @@ namespace AnalyzerHelper.Rules
                     ?? Guid.NewGuid().ToString();
                 bool inFlow = el.Ancestors().Any(a =>
                     a.Name.LocalName == "Flowchart" || a.Name.LocalName == "FlowStep");
+                int depth = el.Ancestors().Count(a => a.Name.LocalName == "CommentOut");
                 var inner = ExtractInnerActivities(el);
                 result.Add(new CommentItem
                 {
                     FilePath = filePath,
+                    RelativePath = rel,
                     IdRef = idRef,
                     DisplayName = (string?)el.Attribute("DisplayName") ?? "(no name)",
                     InnerSummary = BuildSummary(inner),
+                    InvokeTitle = FindAttr(el, "InvokeWorkflowFile", "DisplayName"),
+                    WorkflowFile = FindAttr(el, "InvokeWorkflowFile", "WorkflowFileName"),
                     IsInFlowchart = inFlow,
+                    Depth = depth,
                     ChosenAction = CommentAction.Delete
                 });
             }
             return result;
+        }
+
+        private static string FindAttr(XElement root, string localName, string attr)
+        {
+            var el = root.Descendants().FirstOrDefault(e => e.Name.LocalName == localName);
+            return el == null ? string.Empty
+                : (string?)el.Attributes().FirstOrDefault(a => a.Name.LocalName == attr) ?? string.Empty;
         }
 
         private static bool IsDesignerMetadata(XElement e) => e?.Name.Namespace == Sap10;
@@ -305,10 +393,15 @@ namespace AnalyzerHelper.Rules
     public class CommentItem
     {
         public string FilePath { get; set; } = "";
+        public string RelativePath { get; set; } = "";
         public string IdRef { get; set; } = "";
         public string DisplayName { get; set; } = "";
         public string InnerSummary { get; set; } = "";
+        public string InvokeTitle { get; set; } = "";
+        public string WorkflowFile { get; set; } = "";
         public bool IsInFlowchart { get; set; }
+        /// <summary>Nesting depth — 0 = top level, 1 = inside another CommentOut, etc.</summary>
+        public int Depth { get; set; }
         public CommentAction ChosenAction { get; set; }
     }
 

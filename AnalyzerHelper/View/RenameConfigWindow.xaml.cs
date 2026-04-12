@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace AnalyzerHelper.View
@@ -8,17 +9,23 @@ namespace AnalyzerHelper.View
         private readonly bool _requireStage;
 
         public string ShortName => ShortNameBox.Text?.Trim() ?? "";
-        public string? ProcessStage => ProcessStageBox.Text?.Trim();
+        public string? ProcessStage => (ProcessStageCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()?.Trim();
 
         public RenameConfigWindow(bool requireStage = true)
         {
             _requireStage = requireStage;
             InitializeComponent();
             Owner = System.Windows.Application.Current?.MainWindow;
+
             if (!_requireStage)
             {
                 ProcessStageLabel.Visibility = Visibility.Collapsed;
-                ProcessStageBox.Visibility = Visibility.Collapsed;
+                ProcessStageCombo.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // Default selection: Worker
+                ProcessStageCombo.SelectedIndex = 0;
             }
         }
 
@@ -26,7 +33,7 @@ namespace AnalyzerHelper.View
         {
             Activate();
             // Defer focus so the text box gets it after layout and modal is fully active (avoids not being able to type)
-            Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.BeginInvoke(new System.Action(() =>
             {
                 Activate();
                 ShortNameBox.Focus();
@@ -46,9 +53,9 @@ namespace AnalyzerHelper.View
             }
             if (_requireStage && string.IsNullOrWhiteSpace(ProcessStage))
             {
-                System.Windows.MessageBox.Show("Process Stage is required for Subprocess workflows.", "Validation",
+                System.Windows.MessageBox.Show("Process Stage is required for Subprocess workflows.\nPlease select: Worker, Loader, or LoaderWorker.", "Validation",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
-                ProcessStageBox.Focus();
+                ProcessStageCombo.Focus();
                 return;
             }
             DialogResult = true;

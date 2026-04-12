@@ -10,14 +10,15 @@ namespace AnalyzerHelper.Rules
         private static readonly IAnalyzerRule[] AllRules =
         {
             new TryCatchRule(),
-            new CetTimeZoneRule(),
             new RemoveDefaultsVarArgRule(),
             new HandleCommentedActivitiesRule(),
             new WorkflowFileNamingRule(),
             new AnnotationRule(),
             new BranchesLogsRule(),
-            new UnusedWorkflowFilesRule(),
-            new FlowchartOrphanNodesRule(),
+            new RemoveUnusedVarArgRule(),
+            new SyncInvokeArgumentsRule(),
+            new FixComponentNameRule(),
+            new AddRetryScopeCheckTrueRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;

@@ -4,18 +4,153 @@
         xmlns:models="clr-namespace:AnalyzerHelper.Models"
         Title="Vodafone – Analyzer Helper"
         Loaded="MainWindow_Loaded"
+        Closed="MainWindow_Closed"
         Height="720" Width="1100"
         MinHeight="500" MinWidth="800"
+        FontSize="13"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackground}">
+
+    <Window.Resources>
+
+        <!-- ═══════════════════════════════════════════════════
+             BUTTON STYLES
+             ═══════════════════════════════════════════════════ -->
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="Background"   Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground"   Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="Padding"      Value="10,4"/>
+            <Setter Property="MinHeight"    Value="26"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}"
+                                Opacity="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background"   Value="{StaticResource BorderBrush}"/>
+            <Setter Property="Foreground"   Value="{StaticResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="Padding"      Value="10,4"/>
+            <Setter Property="MinHeight"    Value="26"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}"
+                                Opacity="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════
+             THIN SCROLLBAR
+             ═══════════════════════════════════════════════════ -->
+        <Style x:Key="ThinScrollBar" TargetType="FrameworkElement">
+            <Style.Resources>
+                <Style TargetType="ScrollBar">
+                    <Setter Property="Width"    Value="8"/>
+                    <Setter Property="MinWidth" Value="8"/>
+                    <Setter Property="Height"   Value="8"/>
+                    <Setter Property="MinHeight" Value="8"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Width" Value="10"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Style.Resources>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════
+             RULE CARD TEMPLATE – entire row is clickable
+             ═══════════════════════════════════════════════════ -->
+        <DataTemplate x:Key="RuleCardTemplate">
+            <Border Background="Transparent" Cursor="Hand" Margin="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Grid.Column="0"
+                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              VerticalAlignment="Center" Margin="0,0,6,0"
+                              Checked="RuleCheckBox_Changed" Unchecked="RuleCheckBox_Changed"
+                              IsHitTestVisible="False"/>
+                    <Border Grid.Column="1"
+                            Background="#E60000" CornerRadius="3"
+                            Padding="5,2" Margin="0,0,8,0"
+                            VerticalAlignment="Center"
+                            MinWidth="42" MaxHeight="20">
+                        <TextBlock Text="{Binding RuleId}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding DisplayName}"
+                               FontSize="12" Foreground="{StaticResource TextPrimary}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </Window.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="220"/>
+            <ColumnDefinition Width="81" MaxWidth="400"/>
+            <ColumnDefinition Width="149"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: Side menu – UiPath solution path and loaded files -->
-        <Border Grid.Column="0" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Padding="12,16">
+        <!-- ═══════════════════════════════════════════════════
+             LEFT: Side Panel
+             ═══════════════════════════════════════════════════ -->
+        <Border Grid.Column="0"
+                Background="{StaticResource CardBackground}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,1,0"
+                Padding="6" Grid.ColumnSpan="2">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -25,61 +160,149 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="UiPath solution" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
-                <Grid Grid.Row="1" Margin="0,0,0,8">
+
+                <!-- ── Logo / Branding ── -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Margin="0,0,0,6">
+                    <Image x:Name="HeaderLogo"
+                           Source="pack://application:,,,/View/Assets/vodafone-logo.png"
+                           MaxHeight="24" MaxWidth="80"
+                           Margin="0,0,5,0" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           ImageFailed="HeaderLogo_ImageFailed"/>
+                    <TextBlock x:Name="HeaderVodafoneText"
+                               Text="Vodafone"
+                               FontSize="15" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text=" Analyzer"
+                               FontSize="13" FontWeight="Normal"
+                               Foreground="{StaticResource TextSecondary}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- ── Solution Path ── -->
+                <TextBlock Grid.Row="1" Text="Process Path"
+                           FontWeight="SemiBold" FontSize="11.5"
+                           Foreground="{StaticResource TextPrimary}"
+                           Margin="0,0,0,2"/>
+                <Grid Grid.Row="2" Margin="0,0,0,3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="SolutionPathBox" Grid.Column="0" Padding="8,6" VerticalContentAlignment="Center"
-                             ToolTip="Folder path of your UiPath project/solution"/>
-                    <Button Grid.Column="1" Content="Browse…" Margin="6,0,0,0" Padding="14,8" MinHeight="36" Click="BrowseSolution_Click"
-                            Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" Cursor="Hand" FontSize="13"/>
+                    <TextBox x:Name="SolutionPathBox" Grid.Column="0"
+                             Padding="4,3" FontSize="11.5"
+                             VerticalContentAlignment="Center"
+                             ToolTip="Select the root folder of your UiPath project"/>
+                    <Button Grid.Column="1" Content="Browse…"
+                            Margin="3,0,0,0" Padding="7,3" MinHeight="24"
+                            Click="BrowseSolution_Click"
+                            Style="{StaticResource ActionButton}" FontSize="11"/>
                 </Grid>
-                <Button Grid.Row="2" x:Name="LoadSolutionButton" Content="Load solution" Click="LoadSolution_Click"
-                        Style="{StaticResource PrimaryButton}" Margin="0,0,0,12" HorizontalAlignment="Stretch"/>
-                <TextBlock Grid.Row="3" Text="Select files to apply rules to" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,6"/>
-                <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button x:Name="SelectAllFilesButton" Content="Select All" Click="SelectAllFiles_Click" Padding="14,8" MinHeight="36" Margin="0,0,8,0"
-                            Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                    <Button x:Name="ClearFilesSelectionButton" Content="Clear" Click="ClearFilesSelection_Click" Padding="14,8" MinHeight="36"
-                            Cursor="Hand" Background="{StaticResource BorderBrush}" Foreground="{StaticResource TextPrimary}" BorderThickness="0" FontSize="13"/>
-                </StackPanel>
-                <TextBlock Grid.Row="5" x:Name="SideMenuFilesHeader" Text="0 files loaded (check files to apply rules)" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4" VerticalAlignment="Top"/>
-                <ScrollViewer Grid.Row="6" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
-                    <TreeView x:Name="SolutionFilesTree" BorderThickness="0" Background="Transparent"
+
+                <Button Grid.Row="3" x:Name="LoadSolutionButton"
+                        Content="⟳ Refresh Files"
+                        Click="LoadSolution_Click"
+                        Style="{StaticResource ActionButton}"
+                        Margin="0,0,0,4" HorizontalAlignment="Stretch"
+                        Padding="6,3" MinHeight="24" FontSize="11.5"/>
+
+                <!-- ── Separator ── -->
+                <Border Grid.Row="4" Height="1"
+                        Background="{StaticResource BorderBrush}"
+                        Margin="0,2,0,3"/>
+
+                <!-- ── Workflow Files Header ── -->
+                <Grid Grid.Row="5" Margin="0,0,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Workflow Files"
+                               FontWeight="SemiBold" FontSize="11.5"
+                               Foreground="{StaticResource TextPrimary}"
+                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <Button x:Name="SelectAllFilesButton" Grid.Column="1"
+                            Content="All" Click="SelectAllFiles_Click"
+                            Padding="5,1" MinHeight="18" Margin="0,0,2,0"
+                            Style="{StaticResource ActionButton}" FontSize="10"/>
+                    <Button x:Name="ClearFilesSelectionButton" Grid.Column="2"
+                            Content="None" Click="ClearFilesSelection_Click"
+                            Padding="5,1" MinHeight="18"
+                            Style="{StaticResource SecondaryButton}" FontSize="10"/>
+                    <TextBlock Grid.Column="3" x:Name="SideMenuFilesHeader"
+                               Text="No Files Loaded" FontSize="10.5"
+                               Foreground="{StaticResource TextSecondary}"
+                               Margin="5,0,0,0" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </Grid>
+
+                <!-- ── File Tree ── -->
+                <ScrollViewer Grid.Row="6"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Margin="0,1,0,0"
+                              Style="{StaticResource ThinScrollBar}"
+                              PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+                    <TreeView x:Name="SolutionFilesTree"
+                              BorderThickness="0" Background="Transparent"
                               ItemsSource="{Binding FileTreeRoots}"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              Padding="0,2">
+                              Padding="0">
                         <TreeView.Resources>
-                            <HierarchicalDataTemplate DataType="{x:Type models:SolutionTreeNode}" ItemsSource="{Binding Children}">
-                                <StackPanel Orientation="Horizontal" Margin="0,0" VerticalAlignment="Center">
-                                    <CheckBox Margin="0,0,4,0" VerticalAlignment="Center" Padding="0"
-                                              IsChecked="{Binding FileItem.IsSelected, Mode=TwoWay}"
-                                              Visibility="{Binding IsFolder, Converter={StaticResource BoolToVisibilityInverse}}"/>
-                                    <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextPrimary}"
-                                               Margin="2,0,0,0" TextTrimming="CharacterEllipsis"/>
+                            <HierarchicalDataTemplate DataType="{x:Type models:SolutionTreeNode}"
+                                                      ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <CheckBox Margin="0,0,3,0" VerticalAlignment="Center" Padding="0"
+                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                              IsThreeState="{Binding IsFolder}"
+                                              Checked="TreeNodeCheckBox_Changed"
+                                              Unchecked="TreeNodeCheckBox_Changed"/>
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               VerticalAlignment="Center" FontSize="11.5"
+                                               Foreground="{StaticResource TextPrimary}"
+                                               TextTrimming="CharacterEllipsis"
+                                               FontWeight="{Binding IsFolder, Converter={StaticResource BoolToFontWeight}}"/>
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.Resources>
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                <Setter Property="Padding" Value="0,1"/>
-                                <Setter Property="Margin" Value="0,0,0,0"/>
+                                <Setter Property="IsExpanded"               Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                <Setter Property="Padding"                  Value="0"/>
+                                <Setter Property="Margin"                   Value="0,-1,0,0"/>
                                 <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                <Setter Property="Background"               Value="Transparent"/>
+                                <Setter Property="Foreground"               Value="{StaticResource TextPrimary}"/>
                             </Style>
                         </TreeView.ItemContainerStyle>
                     </TreeView>
                 </ScrollViewer>
+
+                <!-- ── Empty State ── -->
+                <TextBlock Grid.Row="7" x:Name="EmptyStateText"
+                            Text="Choose a UiPath project folder to view and validate its workflow files."
+                            FontSize="11" Foreground="{StaticResource TextSecondary}"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           Margin="4,6,4,4" Visibility="Visible"/>
             </Grid>
         </Border>
 
-        <!-- Right: Header, horizontal category tabs, footer -->
-        <Grid Grid.Column="1">
+        <!-- GridSplitter -->
+        <GridSplitter Grid.Column="2" Width="4"
+                      HorizontalAlignment="Center"
+                      Background="{StaticResource BorderBrush}" Cursor="SizeWE"
+                      ResizeBehavior="PreviousAndNext" ShowsPreview="True"/>
+
+        <!-- ═══════════════════════════════════════════════════
+             RIGHT: Header + Tabs + Footer
+             ═══════════════════════════════════════════════════ -->
+        <Grid Grid.Column="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -87,34 +310,62 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header – Vodafone style (red, logo + title) -->
-            <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="20,14">
+            <!-- ── Header with Unload button ── -->
+            <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="14,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image x:Name="HeaderLogo" MaxHeight="32" MaxWidth="120" Margin="0,0,16,0" Stretch="Uniform" Visibility="Collapsed"/>
-                        <TextBlock x:Name="HeaderVodafoneText" Text="Vodafone" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource HeaderTextBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
-                        <TextBlock Text="Analyzer Helper" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HeaderTextBrush}"/>
-                        <TextBlock Text="Role-based fixes from Vodafone Workflow Analyzer rules" FontSize="12" Foreground="#FFCCCC" Margin="0,2,0,0"/>
-                    </StackPanel>
+                    <TextBlock x:Name="HeaderTitle"
+                               Text="No Process Selected"
+                               FontSize="15" FontWeight="SemiBold"
+                               Foreground="White"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="UnloadProjectButton" Grid.Column="1"
+                            Content="✕ Unload"
+                            Click="UnloadProject_Click"
+                            Visibility="Collapsed"
+                            Padding="8,3" MinHeight="22" FontSize="10"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="#CC0000" CornerRadius="3"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#AA0000"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Button.Foreground>
+                            <SolidColorBrush Color="White"/>
+                        </Button.Foreground>
+                    </Button>
                 </Grid>
             </Border>
 
-            <!-- Horizontal category tabs (fill remaining space) -->
-            <Border Grid.Row="1" Background="{StaticResource CardBackground}" Margin="16,12,16,12" Padding="0" CornerRadius="8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                <TabControl x:Name="CategoryTabs" BorderThickness="0" Background="Transparent" Padding="0"
-                            TabStripPlacement="Top" SelectionChanged="CategoryTabs_SelectionChanged">
+            <!-- ── Tab Control ── -->
+            <Border Grid.Row="2"
+                    Background="{StaticResource CardBackground}"
+                    Margin="6,4,6,4" Padding="0" CornerRadius="4"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <TabControl x:Name="CategoryTabs"
+                            BorderThickness="0" Background="Transparent" Padding="0"
+                            TabStripPlacement="Top"
+                            SelectionChanged="CategoryTabs_SelectionChanged" Margin="0,-1,0,0">
                     <TabControl.Resources>
-                        <Style TargetType="TabItem">
+                        <Style x:Key="TabItemStyle" TargetType="TabItem">
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="TabItem">
-                                        <Border x:Name="Border" Background="#E8F5E9" Padding="20,12" Margin="2,0,0,0" CornerRadius="6,6,0,0" Cursor="Hand">
+                                        <Border x:Name="Border"
+                                                Background="#E8F5E9"
+                                                Padding="10,5" Margin="1,0,0,0"
+                                                CornerRadius="4,4,0,0" Cursor="Hand">
                                             <ContentPresenter ContentSource="Header"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -127,138 +378,544 @@
                             </Setter>
                         </Style>
                     </TabControl.Resources>
-                    <TabItem x:Name="TabNoInteraction">
+
+                    <!-- ── Tab: No Interaction ── -->
+                    <TabItem x:Name="TabNoInteraction" Style="{StaticResource TabItemStyle}">
                         <TabItem.Header>
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="{StaticResource AutoFixBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="No interaction" FontWeight="SemiBold" Foreground="{StaticResource AutoFixBrush}"/>
-                                <TextBlock x:Name="NoInteractionCount" Text=" (0)" Foreground="{StaticResource AutoFixBrush}" Margin="2,0,0,0"/>
+                                <Ellipse Width="6" Height="6"
+                                         Fill="{StaticResource AutoFixBrush}"
+                                         VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="No Interaction"
+                                           FontWeight="SemiBold" FontSize="10.5"
+                                           Foreground="{StaticResource AutoFixBrush}"/>
+                                <TextBlock x:Name="NoInteractionCount" Text=" (0)"
+                                           FontSize="10.5"
+                                           Foreground="{StaticResource AutoFixBrush}"
+                                           Margin="1,0,0,0"/>
                             </StackPanel>
                         </TabItem.Header>
-                        <StackPanel Margin="12,12,12,12">
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <Button x:Name="SelectAllNoInteraction" Content="Select All" Click="SelectAllRules_Click" Tag="NoInteraction" Padding="14,8" MinHeight="36" Margin="0,0,8,0" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                    <Button x:Name="ClearNoInteraction" Content="Clear" Click="ClearRulesSelection_Click" Tag="NoInteraction" Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource BorderBrush}" Foreground="{StaticResource TextPrimary}" BorderThickness="0" FontSize="13"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button x:Name="RunRulesButtonNoInt" Content="Run rules (validate)" Click="RunRules_Click" Padding="14,8" MinHeight="36" Margin="0,0,8,0" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                    <Button x:Name="ApplyFixButtonNoInt" Content="Apply fix to selected files" Click="ApplyFix_Click" Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                </StackPanel>
-                            </Grid>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ListBox x:Name="AutoFixList" BorderThickness="0" Background="Transparent"
-                                         ItemsSource="{Binding AutoFixItems}" ItemContainerStyle="{StaticResource RoleFixItemStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type models:RoleFixItem}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0"
-                                                          Checked="RuleCheckBox_Changed" Unchecked="RuleCheckBox_Changed"/>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                    <TextBlock Text="{Binding RuleId}" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </TabItem>
-                    <TabItem x:Name="TabNeedInteraction">
-                        <TabItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Fill="{StaticResource UserInputBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Need interaction" FontWeight="SemiBold" Foreground="{StaticResource UserInputBrush}"/>
-                                <TextBlock x:Name="NeedInteractionCount" Text=" (0)" Foreground="{StaticResource UserInputBrush}" Margin="2,0,0,0"/>
-                            </StackPanel>
-                        </TabItem.Header>
-                        <StackPanel Margin="12,12,12,12">
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <Button x:Name="SelectAllNeedInteraction" Content="Select All" Click="SelectAllRules_Click" Tag="NeedInteraction" Padding="14,8" MinHeight="36" Margin="0,0,8,0" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                    <Button x:Name="ClearNeedInteraction" Content="Clear" Click="ClearRulesSelection_Click" Tag="NeedInteraction" Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource BorderBrush}" Foreground="{StaticResource TextPrimary}" BorderThickness="0" FontSize="13"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button x:Name="RunRulesButtonNeedInt" Content="Run rules (validate)" Click="RunRules_Click" Padding="14,8" MinHeight="36" Margin="0,0,8,0" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                    <Button x:Name="ApplyFixButtonNeedInt" Content="Apply fix to selected files" Click="ApplyFix_Click" Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
-                                </StackPanel>
-                            </Grid>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ListBox x:Name="UserInputList" BorderThickness="0" Background="Transparent"
-                                         ItemsSource="{Binding UserInputItems}" ItemContainerStyle="{StaticResource RoleFixItemStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type models:RoleFixItem}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0"
-                                                          Checked="RuleCheckBox_Changed" Unchecked="RuleCheckBox_Changed"/>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                    <TextBlock Text="{Binding RuleId}" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </TabItem>
-                    <TabItem x:Name="TabAnalyzerReport">
-                        <TabItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Analyzer Report" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </TabItem.Header>
-                        <Grid Margin="12,12,12,12">
+                        <Grid Margin="5">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid Grid.Row="0" Margin="0,0,0,3">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Button x:Name="ExportToExcelButton" Content="Export to Excel" Click="ExportToExcel_Click"
-                                        Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13" HorizontalAlignment="Left"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button x:Name="RunRulesButtonReport" Content="Run rules (validate)" Click="RunRules_Click" Padding="14,8" MinHeight="36" Cursor="Hand" Background="{StaticResource AccentBrush}" Foreground="White" BorderThickness="0" FontSize="13"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button x:Name="SelectAllNoInteraction" Content="Select All"
+                                            Click="SelectAllRules_Click" Tag="NoInteraction"
+                                            Style="{StaticResource ActionButton}" Margin="0,0,3,0"/>
+                                    <Button x:Name="ClearNoInteraction" Content="Clear"
+                                            Click="ClearRulesSelection_Click" Tag="NoInteraction"
+                                            Style="{StaticResource SecondaryButton}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                            HorizontalAlignment="Right">
+                                    <Button x:Name="RunRulesButtonNoInt" Content="▶ Validate"
+                                            Click="RunRules_Click"
+                                            Style="{StaticResource ActionButton}" Margin="0,0,3,0"/>
+                                    <Button x:Name="ApplyFixButtonNoInt" Content="🔧 Apply Fix"
+                                            Click="ApplyFix_Click"
+                                            Style="{StaticResource ActionButton}"/>
                                 </StackPanel>
                             </Grid>
-                            <DataGrid Grid.Row="1" x:Name="AnalyzerReportGrid" ItemsSource="{Binding ReportRows}"
-                                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
-                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowBackground="White" AlternatingRowBackground="#F9F9F9"
-                                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Rule ID" Binding="{Binding RuleId}" Width="80"/>
-                                    <DataGridTextColumn Header="Rule Name" Binding="{Binding RuleName}" Width="120"/>
-                                    <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="70"/>
-                                    <DataGridTextColumn Header="Message" Binding="{Binding ResultMessage}" Width="2*" MinWidth="160"/>
-                                    <DataGridTextColumn Header="File" Binding="{Binding FilePath}" Width="*" MinWidth="100"/>
-                                    <DataGridTextColumn Header="Recommendation" Binding="{Binding Recommendation}" Width="2*" MinWidth="140"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                          Style="{StaticResource ThinScrollBar}"
+                                          PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+                                <ListBox x:Name="AutoFixList"
+                                         BorderThickness="0" Background="Transparent"
+                                         ItemsSource="{Binding AutoFixItems}"
+                                         ItemContainerStyle="{StaticResource RoleFixItemStyle}"
+                                         ItemTemplate="{StaticResource RuleCardTemplate}"
+                                         SelectionChanged="RuleListBox_SelectionChanged"
+                                         MouseDoubleClick="RuleListBox_MouseDoubleClick"
+                                         PreviewMouseLeftButtonUp="RuleListBox_RowClick"/>
+                            </ScrollViewer>
                         </Grid>
                     </TabItem>
+
+                    <!-- ── Tab: Need Interaction ── -->
+                    <TabItem x:Name="TabNeedInteraction" Style="{StaticResource TabItemStyle}">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6"
+                                         Fill="{StaticResource UserInputBrush}"
+                                         VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="Need Interaction"
+                                           FontWeight="SemiBold" FontSize="10.5"
+                                           Foreground="{StaticResource UserInputBrush}"/>
+                                <TextBlock x:Name="NeedInteractionCount" Text=" (0)"
+                                           FontSize="10.5"
+                                           Foreground="{StaticResource UserInputBrush}"
+                                           Margin="1,0,0,0"/>
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="0,0,0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button x:Name="SelectAllNeedInteraction" Content="Select All"
+                                            Click="SelectAllRules_Click" Tag="NeedInteraction"
+                                            Style="{StaticResource ActionButton}" Margin="0,0,3,0"/>
+                                    <Button x:Name="ClearNeedInteraction" Content="Clear"
+                                            Click="ClearRulesSelection_Click" Tag="NeedInteraction"
+                                            Style="{StaticResource SecondaryButton}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                            HorizontalAlignment="Right">
+                                    <Button x:Name="RunRulesButtonNeedInt" Content="▶ Validate"
+                                            Click="RunRules_Click"
+                                            Style="{StaticResource ActionButton}" Margin="0,0,3,0"/>
+                                    <Button x:Name="ApplyFixButtonNeedInt" Content="🔧 Apply Fix"
+                                            Click="ApplyFix_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </StackPanel>
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                          Style="{StaticResource ThinScrollBar}"
+                                          PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+                                <ListBox x:Name="UserInputList"
+                                         BorderThickness="0" Background="Transparent"
+                                         ItemsSource="{Binding UserInputItems}"
+                                         ItemContainerStyle="{StaticResource RoleFixItemStyle}"
+                                         ItemTemplate="{StaticResource RuleCardTemplate}"
+                                         SelectionChanged="RuleListBox_SelectionChanged"
+                                         MouseDoubleClick="RuleListBox_MouseDoubleClick"
+                                         PreviewMouseLeftButtonUp="RuleListBox_RowClick"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- ── Tab: Analyzer Report ── -->
+                    <TabItem x:Name="TabAnalyzerReport" Style="{StaticResource TabItemStyle}">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📊" FontSize="10.5"
+                                           VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                <TextBlock Text="Analyzer Report"
+                                           FontWeight="SemiBold" FontSize="10.5"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Toolbar row -->
+                            <Grid Grid.Row="0" Margin="0,0,0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="ExportToExcelButton"
+                                        Content="📥 Export"
+                                        Click="ExportToExcel_Click"
+                                        Style="{StaticResource ActionButton}"
+                                        Margin="0,0,3,0"/>
+                                <Button x:Name="SelectAllReportRows" Grid.Column="1"
+                                        Content="Select All"
+                                        Click="SelectAllReportRows_Click"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,3,0"/>
+                                <Button x:Name="ClearReportSelection" Grid.Column="2"
+                                        Content="Clear"
+                                        Click="ClearReportSelection_Click"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Margin="0,0,3,0"/>
+                                <Button x:Name="ToggleColumnsButton" Grid.Column="3"
+                                        Content="⚙ Columns"
+                                        Click="ToggleColumns_Click"
+                                        Style="{StaticResource SecondaryButton}"/>
+                                <Button x:Name="FixSelectedReport" Grid.Column="5"
+                                        Content="🔧 Fix Selected"
+                                        Click="FixSelectedReport_Click"
+                                        Style="{StaticResource ActionButton}"
+                                        Margin="0,0,3,0"/>
+                                <Button x:Name="RunRulesButtonReport" Content="▶ Validate"
+                                        Grid.Column="6"
+                                        Click="RunRules_Click"
+                                        Style="{StaticResource ActionButton}"/>
+                            </Grid>
+
+                            <!-- Filter row -->
+                            <Border Grid.Row="1" Background="#F8F9FA" CornerRadius="4"
+                                    Padding="8,5" Margin="0,0,0,3"
+                                    BorderBrush="#E0E3E8" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🔍" FontSize="11" VerticalAlignment="Center"
+                                               Margin="0,0,6,0" Foreground="#626F86"/>
+                                    <!-- Rule ID filter -->
+                                    <TextBlock Grid.Column="1" Text="Rule ID" FontSize="10"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"
+                                               Foreground="#626F86" FontWeight="SemiBold"/>
+                                    <ComboBox x:Name="FilterRuleId" Grid.Column="2" MinWidth="90" IsEditable="True"
+                                              FontSize="10" Padding="4,2"
+                                              VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                              SelectionChanged="ReportFilter_Changed"
+                                              TextBoxBase.TextChanged="ReportFilter_TextChanged"/>
+                                    <!-- Rule Name filter -->
+                                    <TextBlock Grid.Column="3" Text="Rule Name" FontSize="10"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"
+                                               Foreground="#626F86" FontWeight="SemiBold"/>
+                                    <ComboBox x:Name="FilterRuleName" Grid.Column="4" MinWidth="130" IsEditable="True"
+                                              FontSize="10" Padding="4,2"
+                                              VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                              SelectionChanged="ReportFilter_Changed"
+                                              TextBoxBase.TextChanged="ReportFilter_TextChanged"/>
+                                    <!-- Level filter -->
+                                    <TextBlock Grid.Column="5" Text="Level" FontSize="10"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"
+                                               Foreground="#626F86" FontWeight="SemiBold"/>
+                                    <ComboBox x:Name="FilterLevel" Grid.Column="6"
+                                              FontSize="10" Padding="4,2" MinWidth="70"
+                                              VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                              SelectionChanged="FilterLevel_SelectionChanged">
+                                        <ComboBoxItem Content="All" IsSelected="True"/>
+                                        <ComboBoxItem Content="Error"/>
+                                        <ComboBoxItem Content="Warning"/>
+                                        <ComboBoxItem Content="Info"/>
+                                    </ComboBox>
+                                    <!-- File filter -->
+                                    <TextBlock Grid.Column="7" Text="File" FontSize="10"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"
+                                               Foreground="#626F86" FontWeight="SemiBold"/>
+                                    <ComboBox x:Name="FilterFilePath" Grid.Column="8" MinWidth="150" IsEditable="True"
+                                              FontSize="10" Padding="4,2"
+                                              VerticalContentAlignment="Center"
+                                              SelectionChanged="ReportFilter_Changed"
+                                              TextBoxBase.TextChanged="ReportFilter_TextChanged"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Fix counter bar -->
+                            <Border Grid.Row="2" Background="#F0F4F8" CornerRadius="3"
+                                    Padding="8,4" Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="☑" FontSize="11" Foreground="#1565C0"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock x:Name="ReportSelectionCounter"
+                                               Text="0 Selected for Fix"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#1565C0"
+                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="│" Foreground="#CCC" FontSize="11"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="✔" FontSize="11" Foreground="#2E7D32"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock x:Name="ReportFixedCounter"
+                                               Text="0 Fixed"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#2E7D32"
+                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="│" Foreground="#CCC" FontSize="11"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="○" FontSize="11" Foreground="#F57C00"
+                                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock x:Name="ReportUnfixedCounter"
+                                               Text="0 Unfixed"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#F57C00"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Clean, modern DataGrid (Headers frozen natively) -->
+                            <DataGrid x:Name="AnalyzerReportGrid" Grid.Row="3"
+                                      Background="White" BorderBrush="#DDE1E6" BorderThickness="1"
+                                      ItemsSource="{Binding ReportRows}"
+                                      AutoGenerateColumns="False" IsReadOnly="False"
+                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="None"
+                                      RowBackground="White" AlternatingRowBackground="#FAFBFC"
+                                      CanUserResizeColumns="True" CanUserSortColumns="True"
+                                      FontSize="11" RowHeight="30" ColumnHeaderHeight="32"
+                                      SelectionMode="Extended" SelectionUnit="FullRow"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Resources>
+                                    <Style TargetType="ScrollBar" BasedOn="{StaticResource {x:Type ScrollBar}}">
+                                        <Setter Property="Width" Value="8"/>
+                                        <Setter Property="MinWidth" Value="8"/>
+                                        <Setter Property="Height" Value="8"/>
+                                        <Setter Property="MinHeight" Value="8"/>
+                                    </Style>
+                                </DataGrid.Resources>
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background"      Value="#F4F5F7"/>
+                                            <Setter Property="Foreground"      Value="#44546F"/>
+                                            <Setter Property="FontWeight"      Value="SemiBold"/>
+                                            <Setter Property="FontSize"        Value="11"/>
+                                            <Setter Property="Padding"         Value="8,5"/>
+                                            <Setter Property="BorderBrush"     Value="#DDE1E6"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                            <Setter Property="Cursor"         Value="Hand"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding"         Value="8,4"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="Foreground"      Value="#333"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="DataGridCell">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="#E8F0FE"/>
+                                                    <Setter Property="Foreground" Value="#333"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.CellStyle>
+                                    <DataGrid.RowStyle>
+                                        <Style TargetType="DataGridRow">
+                                            <Setter Property="BorderBrush" Value="#EEF0F2"/>
+                                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#F0F4FF"/>
+                                                </Trigger>
+                                                <DataTrigger Binding="{Binding IsFixed}" Value="True">
+                                                    <Setter Property="Background" Value="#E8F5E9"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.RowStyle>
+                                    <DataGrid.Columns>
+                                        <!-- Select for Fix checkbox -->
+                                        <DataGridCheckBoxColumn Header="☑"
+                                                                Binding="{Binding IsSelectedForFix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Width="32">
+                                            <DataGridCheckBoxColumn.ElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="IsHitTestVisible" Value="True"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.ElementStyle>
+                                            <DataGridCheckBoxColumn.EditingElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.EditingElementStyle>
+                                        </DataGridCheckBoxColumn>
+                                        <DataGridTextColumn x:Name="ColRowNumber" Header="#"
+                                                            Binding="{Binding RowNumber}"
+                                                            Width="Auto" MinWidth="35" IsReadOnly="True"
+                                                            SortDirection="Ascending">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground"          Value="#8993A4"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="FontSize"           Value="10"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn x:Name="ColRuleId" Header="Rule ID"
+                                                            Binding="{Binding RuleId}" Width="Auto" MinWidth="70"
+                                                            IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="Foreground" Value="#44546F"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn x:Name="ColRuleName" Header="Rule Name"
+                                                            Binding="{Binding RuleName}" Width="Auto" MinWidth="120"
+                                                            IsReadOnly="True"/>
+                                        <DataGridTextColumn x:Name="ColLevel" Header="Level"
+                                                            Binding="{Binding Level}" Width="Auto" MinWidth="65"
+                                                            IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="FontSize" Value="10"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Error">
+                                                            <Setter Property="Foreground" Value="#D32F2F"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                            <Setter Property="Foreground" Value="#E65100"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Info">
+                                                            <Setter Property="Foreground" Value="#1565C0"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn x:Name="ColMessage" Header="Message"
+                                                            Binding="{Binding ResultMessage}"
+                                                            Width="2*" MinWidth="150"
+                                                            IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="TextWrapping" Value="NoWrap"/>
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    <Setter Property="ToolTip"      Value="{Binding ResultMessage}"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn x:Name="ColFilePath" Header="File"
+                                                            Binding="{Binding FilePath}"
+                                                            Width="*" MinWidth="120"
+                                                            IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    <Setter Property="ToolTip"      Value="{Binding FilePath}"/>
+                                                    <Setter Property="Foreground"   Value="#626F86"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn x:Name="ColRecommendation" Header="Recommendation"
+                                                            Binding="{Binding Recommendation}"
+                                                            Width="*" MinWidth="120"
+                                                            IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                    <Setter Property="ToolTip"      Value="{Binding Recommendation}"/>
+                                                    <Setter Property="Foreground"   Value="#626F86"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Bottom area: selected rules status -->
+                                <Border Grid.Row="4" Background="#F0F4F8" CornerRadius="3" Padding="8,6" Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="ℹ" FontSize="12" Foreground="#1565C0" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock x:Name="ReportTabBottomText" Text="No rules selected. All available rules will be validated by default."
+                                                   FontSize="11" Foreground="#44546F" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                    </TabItem>
+
                 </TabControl>
             </Border>
 
-            <!-- Selected item details (Run / Apply fix are in each tab row, right of Select All / Clear) -->
-            <Border Grid.Row="2" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,14">
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock x:Name="SelectedRuleId" Text="Select one or more rules in the tab above (or use Select All)" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
-                    <TextBlock x:Name="SelectedDescription" Text="" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" Margin="0,4,0,0" MaxHeight="40" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
+            <!-- ── Footer: Status Bar with Progress + Rule Details ── -->
+            <Border Grid.Row="3"
+                    Background="{StaticResource CardBackground}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Progress bar -->
+                    <ProgressBar x:Name="ActionProgressBar" Grid.Row="0"
+                                 Height="4" IsIndeterminate="True"
+                                 Foreground="{StaticResource AccentBrush}"
+                                 Background="#E8E8E8"
+                                 BorderThickness="0"
+                                 Visibility="Collapsed"/>
+
+                    <!-- Status counters row -->
+                    <Border Grid.Row="1" Background="#F5F5F5" Padding="10,4">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⬤" Foreground="#D32F2F" FontSize="9"
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="StatusErrors" Text="0 Errors"
+                                       FontSize="11" FontWeight="SemiBold" Foreground="#D32F2F"
+                                       VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <TextBlock Text="⬤" Foreground="#F57C00" FontSize="9"
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="StatusWarnings" Text="0 Warnings"
+                                       FontSize="11" FontWeight="SemiBold" Foreground="#F57C00"
+                                       VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <TextBlock Text="⬤" Foreground="#1976D2" FontSize="9"
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="StatusInfo" Text="0 Info"
+                                       FontSize="11" FontWeight="SemiBold" Foreground="#1976D2"
+                                       VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <TextBlock Text="│" Foreground="#CCC" FontSize="11"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="StatusTotal" Text="Ready"
+                                       FontSize="11" Foreground="{StaticResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Rule details -->
+                    <Border Grid.Row="2" Padding="10,4" MinHeight="36" MaxHeight="80">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Style="{StaticResource ThinScrollBar}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="SelectedRuleId"
+                                           Text="Please Select a Project First to Run Rules"
+                                           Foreground="{StaticResource TextSecondary}" FontSize="11"
+                                           VerticalAlignment="Top" Margin="0,0,10,0"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock x:Name="SelectedDescription" Text=""
+                                           Grid.Column="1"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           FontSize="11" TextWrapping="Wrap"
+                                           VerticalAlignment="Top"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
             </Border>
         </Grid>
     </Grid>
