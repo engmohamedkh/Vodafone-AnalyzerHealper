@@ -197,12 +197,24 @@ namespace AnalyzerHelper.View
 
         private void LoadSolutionFromPath(string path)
         {
+            // Capture currently UNselected files to preserve their unselected state
+            var previouslyUnselected = _solutionFiles
+                .Where(f => !f.IsSelected)
+                .Select(f => f.FullPath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            bool isFirstLoad = _solutionFiles.Count == 0;
+
             _solutionFiles.Clear();
             _fileTreeRoots.Clear();
 
             var items = SolutionLoader.LoadWorkflowFiles(path);
             foreach (var item in items)
             {
+                // If it's a refresh and we know this file was explicitly unchecked, keep it unchecked.
+                // New files or files that were checked will default to IsSelected = true.
+                if (!isFirstLoad && previouslyUnselected.Contains(item.FullPath))
+                    item.IsSelected = false;
+
                 item.PropertyChanged += OnFileSelectionChanged;
                 _solutionFiles.Add(item);
             }
@@ -325,7 +337,7 @@ namespace AnalyzerHelper.View
             _refreshDebounce.Stop();
             if (string.IsNullOrWhiteSpace(_loadedSolutionPath) || !Directory.Exists(_loadedSolutionPath)) return;
 
-            var previouslySelected = _solutionFiles.Where(f => f.IsSelected).Select(f => f.FullPath)
+            var previouslyUnselected = _solutionFiles.Where(f => !f.IsSelected).Select(f => f.FullPath)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             if (_solutionWatcher != null) _solutionWatcher.EnableRaisingEvents = false;
@@ -336,7 +348,8 @@ namespace AnalyzerHelper.View
             var items = SolutionLoader.LoadWorkflowFiles(_loadedSolutionPath);
             foreach (var item in items)
             {
-                item.IsSelected = previouslySelected.Contains(item.FullPath);
+                if (previouslyUnselected.Contains(item.FullPath))
+                    item.IsSelected = false;
                 item.PropertyChanged += OnFileSelectionChanged;
                 _solutionFiles.Add(item);
             }
@@ -409,7 +422,15 @@ namespace AnalyzerHelper.View
             if (combo == null) return;
             string current = combo.Text;
             combo.ItemsSource = items;
-            combo.Text = current;
+            
+            if (!string.IsNullOrEmpty(current) && items.Contains(current))
+            {
+                combo.SelectedItem = current;
+            }
+            else
+            {
+                combo.Text = current;
+            }
         }
 
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -447,7 +468,7 @@ namespace AnalyzerHelper.View
         private void RefreshFolderCheckedStates()
         {
             foreach (var root in _fileTreeRoots)
-                if (root.IsFolder) root.UpdateCheckedFromChildren();
+                root.RefreshCheckedStateRecursive();
         }
 
         private void UpdateFilesSelectionSummary()
@@ -474,10 +495,6 @@ namespace AnalyzerHelper.View
             // Guard: fires during InitializeComponent before controls are ready
             if (SelectedRuleId == null) return;
             
-            bool isReportTab = CategoryTabs.SelectedIndex == 2;
-            SelectedRuleId.Visibility = isReportTab ? Visibility.Collapsed : Visibility.Visible;
-            SelectedDescription.Visibility = isReportTab ? Visibility.Collapsed : Visibility.Visible;
-
             ClearFooterDetails();
             UpdateSelectedRulesSummary();
         }
@@ -586,12 +603,12 @@ namespace AnalyzerHelper.View
             // Guard: may be called before XAML controls are ready
             if (RunRulesButtonNoInt == null || SelectedRuleId == null) return;
 
-            var selectedFromActiveTab = GetSelectedRulesFromActiveTab();
-            var totalSelected = GetTotalSelectedRulesCount();
+            var allSelected = GetAllSelectedRules();
+            var totalSelected = allSelected.Count;
             bool hasFiles = _solutionFiles.Count > 0;
 
             RunRulesButtonNoInt.IsEnabled = RunRulesButtonNeedInt.IsEnabled = RunRulesButtonReport.IsEnabled = hasFiles;
-            ApplyFixButtonNoInt.IsEnabled = ApplyFixButtonNeedInt.IsEnabled = hasFiles && selectedFromActiveTab.Count > 0;
+            ApplyFixButtonNoInt.IsEnabled = ApplyFixButtonNeedInt.IsEnabled = hasFiles && allSelected.Count > 0;
 
             if (totalSelected == 0)
             {
@@ -604,19 +621,11 @@ namespace AnalyzerHelper.View
                         ? "No specific rules selected. All available rules will run."
                         : "";
                 }
-                if (ReportTabBottomText != null)
-                {
-                    ReportTabBottomText.Text = "No rules selected. All available rules will be validated by default.";
-                }
             }
             else if (totalSelected > 0)
             {
                 SelectedRuleId.Text = $"{totalSelected} Rule(s) Selected";
-                SelectedDescription.Text = "Run to validate or apply fix.";
-                if (ReportTabBottomText != null)
-                {
-                    ReportTabBottomText.Text = $"{totalSelected} Rule(s) Selected. Only these rules will be validated.";
-                }
+                SelectedDescription.Text = "Only these rules will be validated or fixed.";
             }
         }
 
@@ -625,11 +634,12 @@ namespace AnalyzerHelper.View
             EmptyStateText.Visibility = _solutionFiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private List<RoleFixItem> GetSelectedRulesFromActiveTab()
+        private List<RoleFixItem> GetAllSelectedRules()
         {
-            var collection = CategoryTabs.SelectedItem is TabItem tab && tab == TabNeedInteraction
-                ? _userInputItems : _autoFixItems;
-            return collection.Where(r => r.IsSelected).ToList();
+            var list = new List<RoleFixItem>();
+            list.AddRange(_autoFixItems.Where(r => r.IsSelected));
+            list.AddRange(_userInputItems.Where(r => r.IsSelected));
+            return list;
         }
 
         // =====================================================================
@@ -719,16 +729,35 @@ namespace AnalyzerHelper.View
 
         private void ReportFilter_Changed(object sender, SelectionChangedEventArgs e)
         {
-            RefreshReportWithIndices();
+            Dispatcher.BeginInvoke(new Action(RefreshReportWithIndices), DispatcherPriority.Input);
         }
 
         private void ReportFilter_TextChanged(object sender, TextChangedEventArgs e)
         {
-            RefreshReportWithIndices();
+            Dispatcher.BeginInvoke(new Action(RefreshReportWithIndices), DispatcherPriority.Input);
         }
 
         private void FilterLevel_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            Dispatcher.BeginInvoke(new Action(RefreshReportWithIndices), DispatcherPriority.Input);
+        }
+
+        private void ResetFilters_Click(object sender, RoutedEventArgs e)
+        {
+            _isUpdatingFilters = true;
+
+            FilterRuleId.Text = string.Empty;
+            FilterRuleId.SelectedIndex = -1;
+            
+            FilterRuleName.Text = string.Empty;
+            FilterRuleName.SelectedIndex = -1;
+            
+            FilterFilePath.Text = string.Empty;
+            FilterFilePath.SelectedIndex = -1;
+            
+            FilterLevel.SelectedIndex = 0; // "All"
+
+            _isUpdatingFilters = false;
             RefreshReportWithIndices();
         }
 
@@ -832,15 +861,18 @@ namespace AnalyzerHelper.View
                 var appliedCount = appliedResults.Count;
                 var withMessage = fixResults.Where(r => !r.Applied && !string.IsNullOrEmpty(r.Message)).ToList();
 
-                var summary = appliedCount > 0
-                    ? $"Fix successfully applied to {appliedCount} finding(s) across {appliedResults.Select(r => r.FilePath).Distinct().Count()} file(s)."
-                    : "No fix applied (no findings or not supported).";
+                var rulesApplied = appliedResults.Select(r => r.RuleId).Distinct().Count();
+                var filesChanged = appliedResults.Select(r => r.FilePath).Distinct().Count();
+
+                string summary = appliedCount > 0
+                    ? $"Success: Applied {rulesApplied} rule(s) to fix {appliedCount} finding(s) across {filesChanged} file(s)."
+                    : "No changes needed.";
 
                 if (appliedCount > 0)
                 {
-                    var appliedDetails = string.Join("\n", appliedResults.Select(r => $"• {r.RuleId} -> {System.IO.Path.GetFileName(r.FilePath)}").Take(20));
-                    if (appliedResults.Count > 20) appliedDetails += $"\n  ...and {appliedResults.Count - 20} more.";
-                    summary += "\n\nFixed Items:\n" + appliedDetails;
+                    var ruleGroups = appliedResults.GroupBy(r => r.RuleId);
+                    var appliedDetails = string.Join("\n", ruleGroups.Select(g => $"• {g.Key}: fixed in {g.Select(r => r.FilePath).Distinct().Count()} file(s)"));
+                    summary += "\n\nFixed Rules:\n" + appliedDetails;
 
                     var appliedRuleFiles = appliedResults.Select(r => (r.RuleId, r.FilePath)).ToHashSet();
 
@@ -863,7 +895,19 @@ namespace AnalyzerHelper.View
                 UpdateReportCounters();
                 UpdateStatusBar();
 
-                ShowScrollableSummaryDialog("Fix Selected Results", summary);
+                if (appliedCount > 0)
+                {
+                    ShowScrollableSummaryDialog("Fix Selected Results", summary);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(summary, "Fix Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Windows.MessageBox.Show("The fix operation was cancelled.", "Fix Selected",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -894,7 +938,7 @@ namespace AnalyzerHelper.View
             ForceUIRefresh();
             try
             {
-                var selectedRules = GetSelectedRulesFromActiveTab();
+                var selectedRules = GetAllSelectedRules();
                 var rulesToRun = selectedRules.Count > 0
                     ? RoleFixRegistry.GetRulesByIds(selectedRules.Select(r => r.RuleId))
                     : StandardRules.GetAll();
@@ -966,7 +1010,7 @@ namespace AnalyzerHelper.View
         private void ApplyFix_Click(object sender, RoutedEventArgs e)
         {
             var selectedFiles = GetSelectedFiles();
-            var selectedRules = GetSelectedRulesFromActiveTab();
+            var selectedRules = GetAllSelectedRules();
 
             if (selectedFiles.Count == 0)
             {
@@ -992,24 +1036,35 @@ namespace AnalyzerHelper.View
                 var appliedCount = appliedResults.Count;
                 var withMessage = fixResults.Where(r => !r.Applied && !string.IsNullOrEmpty(r.Message)).ToList();
                 
-                // --- Apply Fix Results dialog (commented out) ---
-                // var summary = appliedCount > 0
-                //     ? $"Fix successfully applied to {appliedCount} finding(s) across {appliedResults.Select(r => r.FilePath).Distinct().Count()} file(s)."
-                //     : "No fix applied (no findings or not supported).";
-                //     
-                // if (appliedCount > 0)
-                // {
-                //     var appliedDetails = string.Join("\n", appliedResults.Select(r => $"• {r.RuleId} -> {Path.GetFileName(r.FilePath)}").Take(20));
-                //     if (appliedResults.Count > 20) appliedDetails += $"\n  ...and {appliedResults.Count - 20} more.";
-                //     summary += "\n\nFixed Items:\n" + appliedDetails;
-                // }
-                // 
-                // if (withMessage.Count > 0)
-                // {
-                //     summary += "\n\nNotices:\n" + string.Join("\n", withMessage.Take(5).Select(r => $"• {r.RuleId} -> {Path.GetFileName(r.FilePath)}: {r.Message}"));
-                // }
-                // 
-                // ShowScrollableSummaryDialog("Apply Fix Results", summary);
+                var rulesApplied = appliedResults.Select(r => r.RuleId).Distinct().Count();
+                var filesChanged = appliedResults.Select(r => r.FilePath).Distinct().Count();
+
+                string summary = appliedCount > 0
+                    ? $"Success: Applied {rulesApplied} rule(s) to fix {appliedCount} finding(s) across {filesChanged} file(s)."
+                    : "No changes needed.";
+
+                if (appliedCount > 0)
+                {
+                    var ruleGroups = appliedResults.GroupBy(r => r.RuleId);
+                    var appliedDetails = string.Join("\n", ruleGroups.Select(g => $"• {g.Key}: fixed in {g.Select(r => r.FilePath).Distinct().Count()} file(s)"));
+                    summary += "\n\nFixed Rules:\n" + appliedDetails;
+
+                    if (withMessage.Count > 0)
+                    {
+                        summary += "\n\nNotices:\n" + string.Join("\n", withMessage.Take(5).Select(r => $"• {r.RuleId} -> {System.IO.Path.GetFileName(r.FilePath)}: {r.Message}"));
+                    }
+                    
+                    ShowScrollableSummaryDialog("Apply Fix Result", summary);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(summary, "Apply Fix", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Windows.MessageBox.Show("The fix operation was cancelled.", "Apply Fix",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

@@ -72,9 +72,30 @@ namespace AnalyzerHelper.Models
         /// <summary>Recalculates folder checked state from children. Called when a child changes.</summary>
         internal void UpdateCheckedFromChildren()
         {
-            if (!IsFolder || _suppressCascade) return;
+            UpdateCheckedStateInternal();
+            Parent?.UpdateCheckedFromChildren();
+        }
 
-            var leaves = GetAllLeaves(this);
+        /// <summary>Recursively refreshes the checked state of this node and all its children from the bottom up.</summary>
+        public void RefreshCheckedStateRecursive()
+        {
+            if (IsFolder)
+            {
+                foreach (var child in Children)
+                    child.RefreshCheckedStateRecursive();
+            }
+            UpdateCheckedStateInternal();
+        }
+
+        private void UpdateCheckedStateInternal()
+        {
+            if (!IsFolder)
+            {
+                OnPropertyChanged(nameof(IsChecked));
+                return;
+            }
+
+            var leaves = GetAllLeaves(this).ToList();
             if (!leaves.Any())
             {
                 _isChecked = false;
@@ -86,9 +107,6 @@ namespace AnalyzerHelper.Models
                 _isChecked = allChecked ? true : noneChecked ? false : null;
             }
             OnPropertyChanged(nameof(IsChecked));
-
-            // Continue bubbling up
-            Parent?.UpdateCheckedFromChildren();
         }
 
         // ── Helpers ───────────────────────────────────────────────
@@ -178,7 +196,7 @@ namespace AnalyzerHelper.Models
 
             // Initialize folder checked states from children
             foreach (var node in root)
-                if (node.IsFolder) node.UpdateCheckedFromChildren();
+                if (node.IsFolder) node.RefreshCheckedStateRecursive();
 
             return root;
         }

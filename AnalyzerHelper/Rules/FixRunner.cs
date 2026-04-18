@@ -87,6 +87,10 @@ namespace AnalyzerHelper.Rules
                         else
                             message = "No change (rule did not apply fix).";
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         message = ex.Message;

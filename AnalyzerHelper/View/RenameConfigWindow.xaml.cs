@@ -9,7 +9,7 @@ namespace AnalyzerHelper.View
         private readonly bool _requireStage;
 
         public string ShortName => ShortNameBox.Text?.Trim() ?? "";
-        public string? ProcessStage => (ProcessStageCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()?.Trim();
+        public string ProcessStage => (ProcessStageCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()?.Trim() ?? "";
 
         public RenameConfigWindow(bool requireStage = true)
         {
@@ -17,15 +17,18 @@ namespace AnalyzerHelper.View
             InitializeComponent();
             Owner = System.Windows.Application.Current?.MainWindow;
 
-            if (!_requireStage)
+            if (_requireStage)
             {
-                ProcessStageLabel.Visibility = Visibility.Collapsed;
-                ProcessStageCombo.Visibility = Visibility.Collapsed;
+                ProcessStageLabel.Visibility = Visibility.Visible;
+                ProcessStageCombo.Visibility = Visibility.Visible;
+                ProcessStageCombo.SelectedIndex = 0; // Default to Worker
+                this.Height = 240; 
             }
             else
             {
-                // Default selection: Worker
-                ProcessStageCombo.SelectedIndex = 0;
+                ProcessStageLabel.Visibility = Visibility.Collapsed;
+                ProcessStageCombo.Visibility = Visibility.Collapsed;
+                this.Height = 180;
             }
         }
 

@@ -11,6 +11,7 @@ namespace AnalyzerHelper.Rules
         {
             new TryCatchRule(),
             new RemoveDefaultsVarArgRule(),
+            new AddRetryScopeCheckTrueRule(),
             new HandleCommentedActivitiesRule(),
             new WorkflowFileNamingRule(),
             new AnnotationRule(),
@@ -18,7 +19,7 @@ namespace AnalyzerHelper.Rules
             new RemoveUnusedVarArgRule(),
             new SyncInvokeArgumentsRule(),
             new FixComponentNameRule(),
-            new AddRetryScopeCheckTrueRule(),
+            new ConfigConstantsUsageRule(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;

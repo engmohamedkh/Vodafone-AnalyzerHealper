@@ -1,0 +1,90 @@
+{
+  "name": "807155_CARE_UK_HBBWiFiXperts_Worker",
+  "projectId": "d88a03f0-84cf-48db-9900-c0d2d9aed5c5",
+  "description": "This process involves picking cases from Remedy, validating them in OpenReach, and VBA, then assigning them to technicians from Remedy.",
+  "main": "807155_CARE_UK_HBBWiFiXperts_Worker.xaml",
+  "dependencies": {
+    "ActivitiesVodafoneActivities_Windows": "[1.0.1]",
+    "ActivitiesVodafoneWorkFlows_Windows": "[1.0.1]",
+    "AWSSDK.EC2": "[3.7.28.3]",
+    "AWSSDK.S3": "[3.7.3.1]",
+    "EC2_BotID_Activities_Windows": "[2.0.0]",
+    "IAP.Logging_Windows": "[1.0.4]",
+    "Sharepoint.Office365.Windows": "[1.0.6]",
+    "UiPath.AmazonWebServices.Activities": "[2.7.1]",
+    "UiPath.Cryptography.Activities": "[1.6.1]",
+    "UiPath.Excel.Activities": "[2.24.4]",
+    "UiPath.Mail.Activities": "[1.24.13]",
+    "UiPath.MicrosoftOffice365.Activities": "[3.4.10]",
+    "UiPath.System.Activities": "[24.10.6]",
+    "UiPath.UIAutomation.Activities": "[24.10.6]",
+    "UiPath.WebAPI.Activities": "[1.16.2]",
+    "vodafone.im.ukcitrix_edgeandcitrixapps": "[2.0.7]",
+    "vodafone.odin.careukapps_edge": "[1.0.10]",
+    "Vodafone.TSS.CheckFontSmooth_Windows": "[1.0.2]",
+    "Vodafone.TSS.ScreenResolution_Windows": "[2.0.2]"
+  },
+  "webServices": [],
+  "entitiesStores": [],
+  "schemaVersion": "4.0",
+  "studioVersion": "22.10.4.0",
+  "projectVersion": "1.0.15",
+  "runtimeOptions": {
+    "autoDispose": false,
+    "netFrameworkLazyLoading": false,
+    "isPausable": true,
+    "isAttended": false,
+    "requiresUserInteraction": true,
+    "supportsPersistence": false,
+    "workflowSerialization": "DataContract",
+    "excludedLoggedData": [
+      "Private:*",
+      "*password*"
+    ],
+    "executionType": "Workflow",
+    "readyForPiP": false,
+    "startsInPiP": false,
+    "mustRestoreAllDependencies": false,
+    "pipType": "ChildSession"
+  },
+  "designOptions": {
+    "projectProfile": "Developement",
+    "outputType": "Process",
+    "libraryOptions": {
+      "includeOriginalXaml": false,
+      "privateWorkflows": []
+    },
+    "processOptions": {
+      "ignoredFiles": []
+    },
+    "fileInfoCollection": [],
+    "modernBehavior": false,
+    "saveToCloud": false
+  },
+  "arguments": {
+    "input": [],
+    "output": []
+  },
+  "expressionLanguage": "VisualBasic",
+  "entryPoints": [
+    {
+      "filePath": "ppmid_BusinessVertical_LocalMarket_ProcessName_Worker.xaml",
+      "uniqueId": "dd30918e-ad00-4d79-a368-2ae5abafadf3",
+      "input": [],
+      "output": []
+    },
+    {
+      "filePath": "807155_CARE_UK_HBBWiFiXperts_Worker.xaml",
+      "uniqueId": "3cddbcaa-b50a-4347-bfd0-97e0292cffcc",
+      "input": [],
+      "output": []
+    }
+  ],
+  "isTemplate": false,
+  "templateProjectData": {
+    "defaultProjectDescription": "IAP-VF-Worker-Template V3.4",
+    "defaultProjectName": "IAP-VF-Worker-Template V3.4"
+  },
+  "publishData": {},
+  "targetFramework": "Windows"
+}

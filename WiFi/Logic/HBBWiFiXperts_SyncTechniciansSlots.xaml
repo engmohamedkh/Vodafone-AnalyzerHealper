@@ -1,0 +1,742 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="HBBWiFiXperts_Function" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:i="clr-namespace:IAP_Logging;assembly=IAP.Logging" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:Sharepoint_Office365_Windows;assembly=Sharepoint.Office365.Windows" xmlns:s1="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common" xmlns:sn="clr-namespace:System.Net;assembly=System.Net.Primitives" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_boolRethrow" Type="InArgument(x:Boolean)" />
+    <x:Property Name="out_strExceptionMessage" Type="OutArgument(x:String)" />
+    <x:Property Name="out_boolNoRecovery" Type="OutArgument(x:Boolean)" />
+    <x:Property Name="in_dctRoboText" Type="InArgument(scg:Dictionary(x:String, x:String))" />
+    <x:Property Name="in_crddctRoboCred" Type="InArgument(scg:Dictionary(x:String, sn:NetworkCredential))" />
+    <x:Property Name="in_intdctRoboInt" Type="InArgument(scg:Dictionary(x:String, x:Int32))" />
+    <x:Property Name="in_booldctRoboBool" Type="InArgument(scg:Dictionary(x:String, x:Boolean))" />
+    <x:Property Name="in_dctcaseText" Type="InArgument(scg:Dictionary(x:String, x:String))" />
+  </x:Members>
+  <this:HBBWiFiXperts_Function.in_dctcaseText>
+    <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" />
+  </this:HBBWiFiXperts_Function.in_dctcaseText>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap:VirtualizedContainerService.HintSize>1352,794</sap:VirtualizedContainerService.HintSize>
+  <sap2010:WorkflowViewState.IdRef>Main_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>IAP_Logging</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Activities.Validation</x:String>
+      <x:String>System.Activities.XamlIntegration</x:String>
+      <x:String>System.Collections</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Data</x:String>
+      <x:String>System.Diagnostics</x:String>
+      <x:String>System.Drawing</x:String>
+      <x:String>System.Globalization</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net.Mail</x:String>
+      <x:String>System.Reflection</x:String>
+      <x:String>System.Runtime.InteropServices</x:String>
+      <x:String>System.Runtime.Serialization</x:String>
+      <x:String>System.Windows.Markup</x:String>
+      <x:String>System.Xml</x:String>
+      <x:String>System.Xml.Linq</x:String>
+      <x:String>System.Xml.Serialization</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>System.ComponentModel</x:String>
+      <x:String>System.Linq.Expressions</x:String>
+      <x:String>System.Net</x:String>
+      <x:String>System.Activities.Runtime.Collections</x:String>
+      <x:String>UiPath.Excel</x:String>
+      <x:String>UiPath.Platform.ResourceHandling</x:String>
+      <x:String>UiPath.Excel.Activities</x:String>
+      <x:String>System.Security</x:String>
+      <x:String>Sharepoint_Office365_Windows</x:String>
+      <x:String>UiPath.Web</x:String>
+      <x:String>UiPath.Web.Activities</x:String>
+      <x:String>System.Numerics</x:String>
+      <x:String>System.Dynamic</x:String>
+      <x:String>System.Collections.Specialized</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Models</x:String>
+      <x:String>Microsoft.Graph</x:String>
+      <x:String>UiPath.Shared.Activities.Utils</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Files.Enums</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Enums</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Enums</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Files.Contracts</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities</x:String>
+      <x:String>UiPath.Shared.Activities</x:String>
+      <x:String>UiPath.Shared.Activities.ConnectionService.Contracts</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.SharePoint</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Files</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Contracts</x:String>
+      <x:String>UiPath.UIAutomationCore.Contracts</x:String>
+      <x:String>UiPath.Platform.SyncObjects</x:String>
+      <x:String>UiPath.Platform</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Files.Models</x:String>
+      <x:String>UiPath.MicrosoftOffice365.Activities.Files.Models</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>IAP.Logging</AssemblyReference>
+      <AssemblyReference>Microsoft.Bcl.AsyncInterfaces</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic.Core</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic.Forms</AssemblyReference>
+      <AssemblyReference>mscorlib</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>PresentationCore</AssemblyReference>
+      <AssemblyReference>PresentationFramework</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.CodeDom</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Collections.NonGeneric</AssemblyReference>
+      <AssemblyReference>System.ComponentModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.Composition</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.EventBasedAsync</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.Primitives</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>System.Configuration.ConfigurationManager</AssemblyReference>
+      <AssemblyReference>System.Console</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Data</AssemblyReference>
+      <AssemblyReference>System.Data.Common</AssemblyReference>
+      <AssemblyReference>System.Drawing</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Linq.Async</AssemblyReference>
+      <AssemblyReference>System.Linq.Expressions</AssemblyReference>
+      <AssemblyReference>System.Memory</AssemblyReference>
+      <AssemblyReference>System.Memory.Data</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Private.DataContractSerialization</AssemblyReference>
+      <AssemblyReference>System.Private.ServiceModel</AssemblyReference>
+      <AssemblyReference>System.Private.Uri</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization.Formatters</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization.Primitives</AssemblyReference>
+      <AssemblyReference>System.Security.Permissions</AssemblyReference>
+      <AssemblyReference>System.ServiceModel</AssemblyReference>
+      <AssemblyReference>System.ValueTuple</AssemblyReference>
+      <AssemblyReference>System.Xaml</AssemblyReference>
+      <AssemblyReference>System.Xml</AssemblyReference>
+      <AssemblyReference>System.Xml.Linq</AssemblyReference>
+      <AssemblyReference>UiPath.Cryptography</AssemblyReference>
+      <AssemblyReference>UiPath.Excel</AssemblyReference>
+      <AssemblyReference>UiPath.Excel.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.Mail</AssemblyReference>
+      <AssemblyReference>UiPath.OCR.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.Studio.Constants</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UIAutomationCore</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>WindowsBase</AssemblyReference>
+      <AssemblyReference>System.Net.HttpListener</AssemblyReference>
+      <AssemblyReference>System.Net.WebProxy</AssemblyReference>
+      <AssemblyReference>System.Net.NameResolution</AssemblyReference>
+      <AssemblyReference>System.Net.WebClient</AssemblyReference>
+      <AssemblyReference>System.Net.Requests</AssemblyReference>
+      <AssemblyReference>System.Net.ServicePoint</AssemblyReference>
+      <AssemblyReference>System.Net.WebHeaderCollection</AssemblyReference>
+      <AssemblyReference>UiPath.Excel.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Platform</AssemblyReference>
+      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
+      <AssemblyReference>Sharepoint.Office365.Windows</AssemblyReference>
+      <AssemblyReference>UiPath.Web</AssemblyReference>
+      <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
+      <AssemblyReference>System.Runtime.Numerics</AssemblyReference>
+      <AssemblyReference>System.Collections.Specialized</AssemblyReference>
+      <AssemblyReference>System.Data.SqlClient</AssemblyReference>
+      <AssemblyReference>System.Private.Xml</AssemblyReference>
+      <AssemblyReference>UiPath.UIAutomationNext</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities.ViewModels</AssemblyReference>
+      <AssemblyReference>netstandard</AssemblyReference>
+      <AssemblyReference>UiPath.MicrosoftOffice365</AssemblyReference>
+      <AssemblyReference>Microsoft.Graph.Core</AssemblyReference>
+      <AssemblyReference>Microsoft.Graph</AssemblyReference>
+      <AssemblyReference>UiPath.Mail.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.AmazonWebServices.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.MicrosoftOffice365.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Cryptography.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.OCR.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.CodedWorkflows</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <sap:WorkflowViewStateService.ViewState>
+    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+      <x:Boolean x:Key="ShouldExpandAll">False</x:Boolean>
+    </scg:Dictionary>
+  </sap:WorkflowViewStateService.ViewState>
+  <Sequence sap2010:Annotation.AnnotationText="Component Name: HBBWiFiXperts_LogTechnicians&#xA;Description: #NA&#xA;Pre Condition: #NA&#xA;Post Condition: #NA&#xA;PDD Section: #NA" DisplayName="Main" sap:VirtualizedContainerService.HintSize="1236,6521" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="HBBWiFiXperts_SyncTechniciansSlots" Name="strComponentName" />
+      <Variable x:TypeArguments="x:Boolean" Name="boolActionSuccess" />
+      <Variable x:TypeArguments="sd:DataTable" Name="dtTracker" />
+      <Variable x:TypeArguments="sd:DataTable" Name="dtSchedule" />
+      <Variable x:TypeArguments="sd:DataTable" Name="dtNewItems" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="lstItemsToRemove" />
+      <Variable x:TypeArguments="sd:DataTable" Name="dtDifferences" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+        <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <i:Process_Monitoring___Component___Start DisplayName="Process Monitoring - Component - Start" sap:VirtualizedContainerService.HintSize="658,122" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___Start_1" StrFileName="[strComponentName]" />
+    <TryCatch DisplayName="Try Catch" sap:VirtualizedContainerService.HintSize="658,6304" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+      <TryCatch.Try>
+        <Sequence DisplayName="Work Sequence" sap:VirtualizedContainerService.HintSize="620,6053" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Sequence.Variables>
+            <Variable x:TypeArguments="scg:IEnumerable(ui:QueueItem)" Name="lstqiTechnicians" />
+            <Variable x:TypeArguments="scg:Dictionary(x:String, x:String)" Name="jsonItemData" />
+            <Variable x:TypeArguments="x:String" Name="strTechniciansRelativePath" />
+            <Variable x:TypeArguments="x:String" Name="strSpSiteName" />
+            <Variable x:TypeArguments="sn:NetworkCredential" Name="crdSpCredential" />
+            <Variable x:TypeArguments="x:String" Name="strAppID" />
+            <Variable x:TypeArguments="x:String" Name="strSPTenantID" />
+            <Variable x:TypeArguments="x:String" Name="strSpSiteUrl" />
+            <Variable x:TypeArguments="x:String" Name="strLocalFolderPath" />
+            <Variable x:TypeArguments="x:String" Name="strTechniciansFileName" />
+            <Variable x:TypeArguments="x:String" Name="strTrackerFileName" />
+            <Variable x:TypeArguments="x:String" Name="strTrackerRelativePath" />
+            <Variable x:TypeArguments="x:String" Name="strSpSiteID" />
+            <Variable x:TypeArguments="ui:QueueItem" Name="qiTechnicianItem" />
+            <Variable x:TypeArguments="njl:JObject" Name="jobjTechnicianJson" />
+            <Variable x:TypeArguments="sd:DataTable" Name="dtNewTracker" />
+            <Variable x:TypeArguments="x:String" Name="strTrackerSheetName" />
+            <Variable x:TypeArguments="x:TimeSpan" Name="tspRetryInterval" />
+            <Variable x:TypeArguments="x:Int32" Name="intNumberOfRetries" />
+            <Variable x:TypeArguments="x:String" Name="strExceptionMessage" />
+            <Variable x:TypeArguments="x:Boolean" Name="boolNoRecovery" />
+          </Sequence.Variables>
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ui:MultipleAssign DisplayName="Multiple Assign" sap:VirtualizedContainerService.HintSize="586,551" sap2010:WorkflowViewState.IdRef="MultipleAssign_1">
+            <ui:MultipleAssign.AssignOperations>
+              <scg:List x:TypeArguments="ui:AssignOperation" Capacity="16">
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_1">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="sn:NetworkCredential">[crdSpCredential]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="sn:NetworkCredential">[in_crddctRoboCred("ExchangeCredential")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_2">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strSpSiteName]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("SPSiteName")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_3">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strAppID]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("SPAppID")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_4">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strSPTenantID]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("SPTenantID")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_5">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strTechniciansFileName]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("TechniciansFileName")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_6">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strLocalFolderPath]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[Environment.CurrentDirectory]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_7">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strSpSiteUrl]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("SPSiteURL")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_8">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strTechniciansRelativePath]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("TechniciansRelativePath")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_9">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strTrackerFileName]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("TrackerFileName")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_10">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strTrackerRelativePath]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("TrackerRelativePath")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_11">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:String)">[jsonItemData]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)">[New Dictionary(Of String, String)]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_12">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:String">[strTrackerSheetName]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:String">[in_dctRoboText("TechniciansSheetName")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_13">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:Int32">[intNumberOfRetries]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:Int32">[in_intdctRoboInt("MaxTimeoutLoops")]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+                <ui:AssignOperation sap2010:WorkflowViewState.IdRef="AssignOperation_14">
+                  <ui:AssignOperation.To>
+                    <OutArgument x:TypeArguments="x:TimeSpan">[tspRetryInterval]</OutArgument>
+                  </ui:AssignOperation.To>
+                  <ui:AssignOperation.Value>
+                    <InArgument x:TypeArguments="x:TimeSpan">[TimeSpan.Parse(in_dctRoboText("RetryScopeInterval"))]</InArgument>
+                  </ui:AssignOperation.Value>
+                </ui:AssignOperation>
+              </scg:List>
+            </ui:MultipleAssign.AssignOperations>
+          </ui:MultipleAssign>
+          <s:SharePoint_GetSpSiteID out_boolActionSuccess="{x:Null}" out_strAccessToken="{x:Null}" sap:VirtualizedContainerService.HintSize="586,224" sap2010:WorkflowViewState.IdRef="SharePoint_GetSpSiteID_2" in_sstrPassword="[crdSpCredential.SecurePassword]" in_strSPAppID="[strAppID]" in_strSPTenantID="[strSPTenantID]" in_strSharepointSiteName="[strSpSiteName]" in_strUsername="[crdSpCredential.UserName]" out_strSpSiteID="[strSpSiteID]" />
+          <ui:Comment sap:VirtualizedContainerService.HintSize="586,107" sap2010:WorkflowViewState.IdRef="Comment_1" Text="// Downlaod both tracker and schedule from sharepoint" />
+          <s:SharePoint_DownloadFile out_boolActionSuccess="{x:Null}" sap:VirtualizedContainerService.HintSize="586,224" sap2010:WorkflowViewState.IdRef="SharePoint_DownloadFile_1" in_intNumberOfRetries="[intNumberOfRetries]" in_sstrBotPassword="[crdSpCredential.SecurePassword]" in_strBotUserName="[crdSpCredential.UserName]" in_strFileNameWithExt="[strTechniciansFileName]" in_strLocalFolderPath="[strLocalFolderPath]" in_strSpAppID="[strAppID]" in_strSpRelativePath="[strTechniciansRelativePath]" in_strSpSiteID="[strSpSiteID]" in_strSpSiteURL="[strSpSiteUrl]" in_strSpTenantID="[strSPTenantID]" in_tspRetryInterval="[tspRetryInterval]" />
+          <s:SharePoint_DownloadFile out_boolActionSuccess="{x:Null}" sap:VirtualizedContainerService.HintSize="586,224" sap2010:WorkflowViewState.IdRef="SharePoint_DownloadFile_2" in_intNumberOfRetries="[intNumberOfRetries]" in_sstrBotPassword="[crdSpCredential.SecurePassword]" in_strBotUserName="[crdSpCredential.UserName]" in_strFileNameWithExt="[strTrackerFileName]" in_strLocalFolderPath="[strLocalFolderPath]" in_strSpAppID="[strAppID]" in_strSpRelativePath="[strTrackerRelativePath]" in_strSpSiteID="[strSpSiteID]" in_strSpSiteURL="[strSpSiteUrl]" in_strSpTenantID="[strSPTenantID]" in_tspRetryInterval="[tspRetryInterval]" />
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke Excel_None_ReadRange workflow" sap:VirtualizedContainerService.HintSize="586,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_3" UnSafe="False" WorkflowFileName="Automation\Other\Excel_None_ReadRange.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="out_dtTableInfo">[dtTracker]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strFilepath">[strLocalFolderPath+"\"+strTrackerFileName]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strSheet">[strTrackerSheetName]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strRange">[String.Empty]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+            <sap:WorkflowViewStateService.ViewState>
+              <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                <x:Boolean x:Key="IsPinned">False</x:Boolean>
+              </scg:Dictionary>
+            </sap:WorkflowViewStateService.ViewState>
+          </ui:InvokeWorkflowFile>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke Excel_None_ReadRange workflow" sap:VirtualizedContainerService.HintSize="586,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_4" UnSafe="False" WorkflowFileName="Automation\Other\Excel_None_ReadRange.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="out_dtTableInfo">[dtSchedule]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strFilepath">[in_dctRoboText("TechniciansFilePath").Replace("[Dirc]",Environment.CurrentDirectory)]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strSheet">[strTrackerSheetName]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strRange">[String.Empty]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+            <sap:WorkflowViewStateService.ViewState>
+              <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                <x:Boolean x:Key="IsPinned">False</x:Boolean>
+              </scg:Dictionary>
+            </sap:WorkflowViewStateService.ViewState>
+          </ui:InvokeWorkflowFile>
+          <ui:InvokeCode ContinueOnError="{x:Null}" Code="If dtTechnicians IsNot Nothing AndAlso dtTechnicians.Rows.Count &gt; 0 AndAlso dtTechnicians.Columns.Contains(&quot;Remedy Username&quot;) Then&#xD;&#xA;&#xD;&#xA;    For Each r As DataRow In dtTechnicians.Rows&#xD;&#xA;        If r(&quot;Remedy Username&quot;) IsNot DBNull.Value AndAlso r(&quot;Remedy Username&quot;).ToString.Trim &lt;&gt; &quot;&quot; Then&#xD;&#xA;            r(&quot;Remedy Username&quot;) = r(&quot;Remedy Username&quot;).ToString.Trim.ToLower()&#xD;&#xA;        End If&#xD;&#xA;    Next&#xD;&#xA;&#xD;&#xA;    Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)&#xD;&#xA;    For i As Integer = dtTechnicians.Rows.Count - 1 To 0 Step -1&#xD;&#xA;        Dim v As String = If(dtTechnicians.Rows(i)(&quot;Remedy Username&quot;) Is DBNull.Value, &quot;&quot;, dtTechnicians.Rows(i)(&quot;Remedy Username&quot;).ToString.Trim)&#xD;&#xA;        If v = &quot;&quot; OrElse Not seen.Add(v) Then&#xD;&#xA;            dtTechnicians.Rows.RemoveAt(i)&#xD;&#xA;        End If&#xD;&#xA;    Next&#xD;&#xA;&#xD;&#xA;End If" DisplayName="Invoke Code" sap:VirtualizedContainerService.HintSize="586,197" sap2010:WorkflowViewState.IdRef="InvokeCode_4">
+            <ui:InvokeCode.Arguments>
+              <InOutArgument x:TypeArguments="sd:DataTable" x:Key="dtTechnicians">
+                <VisualBasicReference x:TypeArguments="sd:DataTable" ExpressionText="dtSchedule" />
+              </InOutArgument>
+            </ui:InvokeCode.Arguments>
+          </ui:InvokeCode>
+          <ui:InvokeCode ContinueOnError="{x:Null}" Code="For Each r As DataRow In dt.Rows&#xA;    If r.IsNull(&quot;Remedy Username&quot;) OrElse String.IsNullOrWhiteSpace(r(&quot;Remedy Username&quot;).ToString) Then&#xA;        Continue For&#xA;    End If&#xA;    If r.IsNull(&quot;Opens&quot;) OrElse String.IsNullOrWhiteSpace(r(&quot;Opens&quot;).ToString) Then&#xA;        r(&quot;Opens&quot;) = 0&#xA;    End If&#xA;    If r.IsNull(&quot;Released&quot;) OrElse String.IsNullOrWhiteSpace(r(&quot;Released&quot;).ToString) Then&#xA;        r(&quot;Released&quot;) = 0&#xA;    End If&#xA;Next" DisplayName="Invoke Code" sap:VirtualizedContainerService.HintSize="586,197" sap2010:WorkflowViewState.IdRef="InvokeCode_3">
+            <ui:InvokeCode.Arguments>
+              <InOutArgument x:TypeArguments="sd:DataTable" x:Key="dt">[dtSchedule]</InOutArgument>
+            </ui:InvokeCode.Arguments>
+          </ui:InvokeCode>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Orch_GetQueueItems - Invoke Workflow File (Logic\Orch_GetQueueItems.xaml)" sap:VirtualizedContainerService.HintSize="586,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_5" UnSafe="False" WorkflowFileName="Logic\Orch_GetTechnicianItems.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:Boolean" x:Key="in_boolRethrow">False</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strQueueName">[in_dctRoboText("TechniciansQueueName")]</InArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_strExceptionMessage">[strExceptionMessage]</OutArgument>
+              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_boolNoRecovery">[boolNoRecovery]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strOrchFolderPath">[in_dctRoboText("OrchFolder")]</InArgument>
+              <OutArgument x:TypeArguments="scg:IEnumerable(ui:QueueItem)" x:Key="out_lstqiQueueItems">[lstqiTechnicians]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strPrefix">[Now.ToString("ddMMyyyy")]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+            <sap:WorkflowViewStateService.ViewState>
+              <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                <x:Boolean x:Key="IsPinned">False</x:Boolean>
+              </scg:Dictionary>
+            </sap:WorkflowViewStateService.ViewState>
+          </ui:InvokeWorkflowFile>
+          <ui:ForEach x:TypeArguments="ui:QueueItem" CurrentIndex="{x:Null}" DisplayName="For Each qi" sap:VirtualizedContainerService.HintSize="586,488" sap2010:WorkflowViewState.IdRef="ForEach`1_2" Values="[lstqiTechnicians]">
+            <ui:ForEach.Body>
+              <ActivityAction x:TypeArguments="ui:QueueItem">
+                <ActivityAction.Argument>
+                  <DelegateInArgument x:TypeArguments="ui:QueueItem" Name="qi" />
+                </ActivityAction.Argument>
+                <Sequence DisplayName="Body" sap:VirtualizedContainerService.HintSize="468,342" sap2010:WorkflowViewState.IdRef="Sequence_11">
+                  <Sequence.Variables>
+                    <Variable x:TypeArguments="x:String" Name="strDecryptedItemData" />
+                  </Sequence.Variables>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                  <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="IAP_DecryptText - Invoke Workflow File (Logic\IAP_DecryptText.xaml)" sap:VirtualizedContainerService.HintSize="434,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_6" UnSafe="False" WorkflowFileName="Logic\IAP_DecryptText.xaml">
+                    <ui:InvokeWorkflowFile.Arguments>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strTextToDecrypt">[qi.SpecificContent("Item Data").ToString]</InArgument>
+                      <OutArgument x:TypeArguments="x:String" x:Key="out_strDecryptedValue">[strDecryptedItemData]</OutArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strEncryptionKey">[in_crddctRoboCred("PayloadEncryption").Password]</InArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strContextInfo">[String.Empty]</InArgument>
+                    </ui:InvokeWorkflowFile.Arguments>
+                  </ui:InvokeWorkflowFile>
+                  <Assign sap:VirtualizedContainerService.HintSize="434,105" sap2010:WorkflowViewState.IdRef="Assign_14">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="x:String">[jsonItemData(qi.Reference.ToString)]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="x:String">[strDecryptedItemData]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </Sequence>
+              </ActivityAction>
+            </ui:ForEach.Body>
+            <sap:WorkflowViewStateService.ViewState>
+              <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                <x:Boolean x:Key="IsPinned">False</x:Boolean>
+              </scg:Dictionary>
+            </sap:WorkflowViewStateService.ViewState>
+          </ui:ForEach>
+          <ui:InvokeCode ContinueOnError="{x:Null}" Code="Dim openAvail As New Dictionary(Of String, Integer)()&#xA;Dim releasedAvail As New Dictionary(Of String, Integer)()&#xA;&#xA;Dim existingShifts As New Dictionary(Of String, Tuple(Of String, DateTime, DateTime))()&#xA;&#xA;For Each qi As UiPath.Core.QueueItem In lstqiTechnicians&#xA;    Dim reference As String = If(qi.Reference, &quot;&quot;)&#xA;    Dim status As String = &quot;new&quot;&#xA;    Try&#xA;        status = qi.Status.ToString().ToLower().Replace(&quot; &quot;, &quot;&quot;).Replace(&quot;_&quot;, &quot;&quot;)&#xA;    Catch&#xA;    End Try&#xA;&#xA;    Dim username As String = &quot;&quot;&#xA;    Dim qShift As String = &quot;&quot;&#xA;    Dim qShiftStart As DateTime = DateTime.MinValue&#xA;    Dim qShiftEnd As DateTime = DateTime.MinValue&#xA;&#xA;    If jsonItemData.ContainsKey(reference) AndAlso jsonItemData(reference).Length &gt; 0 Then&#xA;        Try&#xA;            Dim jObj As Newtonsoft.Json.Linq.JObject = Newtonsoft.Json.Linq.JObject.Parse(jsonItemData(reference))&#xA;            If jObj(&quot;remedy_username&quot;) IsNot Nothing Then username = jObj(&quot;remedy_username&quot;).ToString()&#xA;            If jObj(&quot;shift&quot;) IsNot Nothing Then qShift = jObj(&quot;shift&quot;).ToString()&#xA;            If jObj(&quot;shift_start&quot;) IsNot Nothing Then DateTime.TryParse(jObj(&quot;shift_start&quot;).ToString(), qShiftStart)&#xA;            If jObj(&quot;shift_end&quot;) IsNot Nothing Then DateTime.TryParse(jObj(&quot;shift_end&quot;).ToString(), qShiftEnd)&#xA;        Catch&#xA;        End Try&#xA;    End If&#xA;&#xA;    If username.Length = 0 Then Continue For&#xA;&#xA;    existingShifts(username) = Tuple.Create(qShift, qShiftStart, qShiftEnd)&#xA;&#xA;    Dim refLower As String = reference.ToLower()&#xA;&#xA;    If status &lt;&gt; &quot;failed&quot; AndAlso status &lt;&gt; &quot;abandoned&quot; AndAlso status &lt;&gt; &quot;deleted&quot; Then&#xA;        If refLower.Contains(&quot;_open_&quot;) Then&#xA;            openAvail(username) = If(openAvail.ContainsKey(username), openAvail(username) + 1, 1)&#xA;        End If&#xA;        If refLower.Contains(&quot;_released_&quot;) Then&#xA;            releasedAvail(username) = If(releasedAvail.ContainsKey(username), releasedAvail(username) + 1, 1)&#xA;        End If&#xA;    End If&#xA;Next&#xA;&#xA;Dim today As String = DateTime.Now.ToString(&quot;ddMMyyyy&quot;)&#xA;Dim currentDate As String = DateTime.Now.ToString(&quot;dd/MM/yyyy&quot;)&#xA;&#xA;Dim formats() As String = {&quot;dd/MM/yyyy HH:mm&quot;, &quot;dd/MM/yyyy H:mm&quot;}&#xA;&#xA;' ── Determine deduction based on system clock UTC offset ──&#xA;Dim utcOffset As Integer = CInt(TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalHours)&#xA;Dim deductMinutes As Integer = If(utcOffset &gt;= 1, 105, 165)&#xA;&#xA;dtDifferences = New DataTable()&#xA;dtDifferences.Columns.Add(&quot;remedy_username&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;name&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;shift&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;shift_start&quot;, GetType(DateTime))&#xA;dtDifferences.Columns.Add(&quot;shift_end&quot;, GetType(DateTime))&#xA;dtDifferences.Columns.Add(&quot;open_slots_diff&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;released_slots_diff&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;status&quot;, GetType(String))&#xA;dtDifferences.Columns.Add(&quot;shift_changed&quot;, GetType(Boolean))&#xA;&#xA;Dim processedUsers As New HashSet(Of String)()&#xA;&#xA;For Each schedRow As DataRow In dtSchedule.Rows&#xA;    Dim s As String = schedRow(1).ToString().Trim()&#xA;&#xA;    ' ── Word-based shift (OFF, LEAVE, etc) → remove all slots for this user ──&#xA;    If Not (s.Contains(&quot;:&quot;) AndAlso s.Contains(&quot;-&quot;)) Then&#xA;        Dim wordShiftUser As String = schedRow(2).ToString().ToLower().Trim()&#xA;        processedUsers.Add(wordShiftUser)&#xA;        If openAvail.ContainsKey(wordShiftUser) OrElse releasedAvail.ContainsKey(wordShiftUser) Then&#xA;            Dim wordShiftOpens As Integer = If(openAvail.ContainsKey(wordShiftUser), openAvail(wordShiftUser), 0)&#xA;            Dim wordShiftReleased As Integer = If(releasedAvail.ContainsKey(wordShiftUser), releasedAvail(wordShiftUser), 0)&#xA;            If wordShiftOpens &gt; 0 OrElse wordShiftReleased &gt; 0 Then&#xA;                Dim newRow As DataRow = dtDifferences.NewRow()&#xA;                newRow(&quot;remedy_username&quot;) = wordShiftUser&#xA;                newRow(&quot;name&quot;) = schedRow(0).ToString()&#xA;                newRow(&quot;shift&quot;) = &quot;N/A&quot;&#xA;                newRow(&quot;shift_start&quot;) = DateTime.Now&#xA;                newRow(&quot;shift_end&quot;) = DateTime.Now&#xA;                newRow(&quot;open_slots_diff&quot;) = If(wordShiftOpens &gt; 0, &quot;-&quot; &amp; wordShiftOpens.ToString(), &quot;0&quot;)&#xA;                newRow(&quot;released_slots_diff&quot;) = If(wordShiftReleased &gt; 0, &quot;-&quot; &amp; wordShiftReleased.ToString(), &quot;0&quot;)&#xA;                newRow(&quot;status&quot;) = &quot;Removed&quot;&#xA;                newRow(&quot;shift_changed&quot;) = False&#xA;                dtDifferences.Rows.Add(newRow)&#xA;            End If&#xA;        End If&#xA;        Continue For&#xA;    End If&#xA;&#xA;    Dim p() As String = s.Split(&quot;-&quot;c)&#xA;    Dim st As String = p(0).Replace(&quot; &quot;, &quot;&quot;).Trim()&#xA;    Dim en As String = If(p.Length &gt; 1, p(1).Replace(&quot; &quot;, &quot;&quot;).Trim(), &quot;&quot;)&#xA;&#xA;    If Not ((st.Length = 4 OrElse st.Length = 5) AndAlso st.Contains(&quot;:&quot;)) Then Continue For&#xA;    If Not ((en.Length = 4 OrElse en.Length = 5) AndAlso en.Contains(&quot;:&quot;)) Then Continue For&#xA;&#xA;    Dim sDt As DateTime&#xA;    Dim eDt As DateTime&#xA;    If Not DateTime.TryParseExact(currentDate &amp; &quot; &quot; &amp; st, formats, Nothing, Globalization.DateTimeStyles.None, sDt) Then Continue For&#xA;    If Not DateTime.TryParseExact(currentDate &amp; &quot; &quot; &amp; en, formats, Nothing, Globalization.DateTimeStyles.None, eDt) Then Continue For&#xA;&#xA;    Dim sDtEffective As DateTime = sDt.AddMinutes(-deductMinutes)&#xA;    Dim eDtEffective As DateTime = eDt.AddMinutes(-deductMinutes)&#xA;&#xA;    If DateTime.Now &gt; eDtEffective Then Continue For&#xA;&#xA;    Dim username As String = schedRow(2).ToString().ToLower().Trim()&#xA;    Dim name As String = schedRow(0).ToString()&#xA;    Dim scheduleReleased As Integer = Convert.ToInt32(schedRow(&quot;Released&quot;))&#xA;    Dim scheduleOpens As Integer = Convert.ToInt32(schedRow(&quot;Opens&quot;))&#xA;&#xA;    ' ── Detect shift change by time only (no shift string stored in JSON) ──&#xA;    Dim shiftChanged As Boolean = False&#xA;    If existingShifts.ContainsKey(username) Then&#xA;        Dim existing = existingShifts(username)&#xA;        Dim startMatch As Boolean = existing.Item2.ToString(&quot;HHmm&quot;).Equals(sDtEffective.ToString(&quot;HHmm&quot;))&#xA;        Dim endMatch As Boolean = existing.Item3.ToString(&quot;HHmm&quot;).Equals(eDtEffective.ToString(&quot;HHmm&quot;))&#xA;        shiftChanged = Not (startMatch AndAlso endMatch)&#xA;    End If&#xA;&#xA;    Dim summaryOpens As Integer = If(openAvail.ContainsKey(username), openAvail(username), 0)&#xA;    Dim summaryReleased As Integer = If(releasedAvail.ContainsKey(username), releasedAvail(username), 0)&#xA;    Dim openDiff As Integer = scheduleOpens - summaryOpens&#xA;    Dim releasedDiff As Integer = scheduleReleased - summaryReleased&#xA;&#xA;    processedUsers.Add(username)&#xA;&#xA;    If openDiff &lt;&gt; 0 OrElse releasedDiff &lt;&gt; 0 OrElse shiftChanged Then&#xA;        Dim newRow As DataRow = dtDifferences.NewRow()&#xA;        newRow(&quot;remedy_username&quot;) = username&#xA;        newRow(&quot;name&quot;) = name&#xA;        newRow(&quot;shift&quot;) = s&#xA;        newRow(&quot;shift_start&quot;) = sDtEffective&#xA;        newRow(&quot;shift_end&quot;) = eDtEffective&#xA;        newRow(&quot;open_slots_diff&quot;) = If(openDiff &gt; 0, &quot;+&quot; &amp; openDiff.ToString(), openDiff.ToString())&#xA;        newRow(&quot;released_slots_diff&quot;) = If(releasedDiff &gt; 0, &quot;+&quot; &amp; releasedDiff.ToString(), releasedDiff.ToString())&#xA;        newRow(&quot;status&quot;) = If(openAvail.ContainsKey(username) OrElse releasedAvail.ContainsKey(username), &quot;Modified&quot;, &quot;New&quot;)&#xA;        newRow(&quot;shift_changed&quot;) = shiftChanged&#xA;        dtDifferences.Rows.Add(newRow)&#xA;    End If&#xA;Next&#xA;&#xA;Dim allQueueUsers As New HashSet(Of String)(openAvail.Keys.Union(releasedAvail.Keys))&#xA;For Each username As String In allQueueUsers&#xA;    If Not processedUsers.Contains(username) Then&#xA;        Dim summaryOpens As Integer = If(openAvail.ContainsKey(username), openAvail(username), 0)&#xA;        Dim summaryReleased As Integer = If(releasedAvail.ContainsKey(username), releasedAvail(username), 0)&#xA;        If summaryOpens &gt; 0 OrElse summaryReleased &gt; 0 Then&#xA;            Dim newRow As DataRow = dtDifferences.NewRow()&#xA;            newRow(&quot;remedy_username&quot;) = username&#xA;            newRow(&quot;name&quot;) = &quot;N/A&quot;&#xA;            newRow(&quot;shift&quot;) = &quot;N/A&quot;&#xA;            newRow(&quot;shift_start&quot;) = DateTime.Now&#xA;            newRow(&quot;shift_end&quot;) = DateTime.Now&#xA;            newRow(&quot;open_slots_diff&quot;) = If(summaryOpens &gt; 0, &quot;-&quot; &amp; summaryOpens.ToString(), &quot;0&quot;)&#xA;            newRow(&quot;released_slots_diff&quot;) = If(summaryReleased &gt; 0, &quot;-&quot; &amp; summaryReleased.ToString(), &quot;0&quot;)&#xA;            newRow(&quot;status&quot;) = &quot;Removed&quot;&#xA;            newRow(&quot;shift_changed&quot;) = False&#xA;            dtDifferences.Rows.Add(newRow)&#xA;        End If&#xA;    End If&#xA;Next&#xA;&#xA;Dim existingCounts As New Dictionary(Of String, Dictionary(Of String, Object))&#xA;For Each kvp As KeyValuePair(Of String, String) In jsonItemData&#xA;    Dim itemId As String = kvp.Key&#xA;    Dim itemIdLower As String = itemId.ToLower()&#xA;    Dim itemType As String = If(itemIdLower.Contains(&quot;_released_&quot;), &quot;Released&quot;, &quot;Open&quot;)&#xA;&#xA;    Dim jObj As Newtonsoft.Json.Linq.JObject = Newtonsoft.Json.Linq.JObject.Parse(kvp.Value)&#xA;    Dim username As String = jObj(&quot;remedy_username&quot;).ToString().ToLower()&#xA;&#xA;    If Not existingCounts.ContainsKey(username) Then&#xA;        existingCounts(username) = New Dictionary(Of String, Object) From {&#xA;            {&quot;OpenIds&quot;, New List(Of String)},&#xA;            {&quot;ReleasedIds&quot;, New List(Of String)}&#xA;        }&#xA;    End If&#xA;&#xA;    If itemType = &quot;Open&quot; Then&#xA;        CType(existingCounts(username)(&quot;OpenIds&quot;), List(Of String)).Add(itemId)&#xA;    Else&#xA;        CType(existingCounts(username)(&quot;ReleasedIds&quot;), List(Of String)).Add(itemId)&#xA;    End If&#xA;Next&#xA;&#xA;dtNewItems = New DataTable()&#xA;dtNewItems.Columns.Add(&quot;Name&quot;, GetType(String))&#xA;dtNewItems.Columns.Add(&quot;Shift&quot;, GetType(String))&#xA;dtNewItems.Columns.Add(&quot;Shift Start&quot;, GetType(DateTime))&#xA;dtNewItems.Columns.Add(&quot;Shift End&quot;, GetType(DateTime))&#xA;dtNewItems.Columns.Add(&quot;Remedy Username&quot;, GetType(String))&#xA;dtNewItems.Columns.Add(&quot;ID&quot;, GetType(String))&#xA;dtNewItems.Columns.Add(&quot;Type&quot;, GetType(String))&#xA;&#xA;lstItemsToRemove = New List(Of String)&#xA;&#xA;Dim rCtr As Integer = 1&#xA;Dim oCtr As Integer = 1&#xA;&#xA;For Each kvp As KeyValuePair(Of String, String) In jsonItemData&#xA;    Dim itemId As String = kvp.Key&#xA;    Dim itemIdLower As String = itemId.ToLower()&#xA;    Dim parts() As String = itemId.Split(&quot;_&quot;c)&#xA;    Dim num As Integer&#xA;    If Integer.TryParse(parts(parts.Length - 1), num) Then&#xA;        If itemIdLower.Contains(&quot;_released_&quot;) AndAlso num &gt;= rCtr Then rCtr = num + 1&#xA;        If itemIdLower.Contains(&quot;_open_&quot;) AndAlso num &gt;= oCtr Then oCtr = num + 1&#xA;    End If&#xA;Next&#xA;&#xA;Dim newItemBuckets As New List(Of List(Of DataRow))&#xA;&#xA;Dim sortedDiffRows As List(Of DataRow) = dtDifferences.AsEnumerable() _&#xA;    .Where(Function(r) r(&quot;shift&quot;).ToString() &lt;&gt; &quot;N/A&quot;) _&#xA;    .OrderBy(Function(r) CDate(r(&quot;shift_start&quot;))) _&#xA;    .ToList()&#xA;&#xA;Dim localItemsToRemove As New List(Of String)&#xA;&#xA;' ── Handle Removed rows (N/A shift) → add their new items to remove list ──&#xA;For Each diffRow As DataRow In dtDifferences.AsEnumerable().Where(Function(r) r(&quot;shift&quot;).ToString() = &quot;N/A&quot;)&#xA;    Dim removedUser As String = diffRow(&quot;remedy_username&quot;).ToString()&#xA;    If existingCounts.ContainsKey(removedUser) Then&#xA;        Dim openIds As List(Of String) = CType(existingCounts(removedUser)(&quot;OpenIds&quot;), List(Of String))&#xA;        Dim releasedIds As List(Of String) = CType(existingCounts(removedUser)(&quot;ReleasedIds&quot;), List(Of String))&#xA;        For Each qi As UiPath.Core.QueueItem In lstqiTechnicians&#xA;            Dim qRef As String = If(qi.Reference, &quot;&quot;)&#xA;            Dim qStatus As String = &quot;new&quot;&#xA;            Try&#xA;                qStatus = qi.Status.ToString().ToLower().Replace(&quot; &quot;, &quot;&quot;).Replace(&quot;_&quot;, &quot;&quot;)&#xA;            Catch&#xA;            End Try&#xA;            If qStatus &lt;&gt; &quot;failed&quot; AndAlso qStatus &lt;&gt; &quot;abandoned&quot; AndAlso qStatus &lt;&gt; &quot;deleted&quot; AndAlso qStatus &lt;&gt; &quot;successful&quot; Then&#xA;                If openIds.Contains(qRef) AndAlso Not localItemsToRemove.Contains(qRef) Then localItemsToRemove.Add(qRef)&#xA;                If releasedIds.Contains(qRef) AndAlso Not localItemsToRemove.Contains(qRef) Then localItemsToRemove.Add(qRef)&#xA;            End If&#xA;        Next&#xA;    End If&#xA;Next&#xA;&#xA;For Each diffRow As DataRow In sortedDiffRows&#xA;    Dim username As String = diffRow(&quot;remedy_username&quot;).ToString()&#xA;    Dim name As String = diffRow(&quot;name&quot;).ToString()&#xA;    Dim shift As String = diffRow(&quot;shift&quot;).ToString()&#xA;    Dim shiftStart As DateTime = CDate(diffRow(&quot;shift_start&quot;))&#xA;    Dim shiftEnd As DateTime = CDate(diffRow(&quot;shift_end&quot;))&#xA;    Dim stStr As String = shiftStart.ToString(&quot;HHmm&quot;)&#xA;    Dim enStr As String = shiftEnd.ToString(&quot;HHmm&quot;)&#xA;    Dim openDiff As Integer = Integer.Parse(diffRow(&quot;open_slots_diff&quot;).ToString().Replace(&quot;+&quot;, &quot;&quot;))&#xA;    Dim releasedDiff As Integer = Integer.Parse(diffRow(&quot;released_slots_diff&quot;).ToString().Replace(&quot;+&quot;, &quot;&quot;))&#xA;    Dim shiftChanged As Boolean = CBool(diffRow(&quot;shift_changed&quot;))&#xA;&#xA;    Dim bucket As New List(Of DataRow)&#xA;&#xA;    If shiftChanged AndAlso existingCounts.ContainsKey(username) Then&#xA;        Dim openIds As List(Of String) = CType(existingCounts(username)(&quot;OpenIds&quot;), List(Of String))&#xA;        Dim releasedIds As List(Of String) = CType(existingCounts(username)(&quot;ReleasedIds&quot;), List(Of String))&#xA;&#xA;        For Each qi As UiPath.Core.QueueItem In lstqiTechnicians&#xA;            Dim qRef As String = If(qi.Reference, &quot;&quot;)&#xA;            Dim qStatus As String = &quot;new&quot;&#xA;            Try&#xA;                qStatus = qi.Status.ToString().ToLower().Replace(&quot; &quot;, &quot;&quot;).Replace(&quot;_&quot;, &quot;&quot;)&#xA;            Catch&#xA;            End Try&#xA;            If qStatus &lt;&gt; &quot;failed&quot; AndAlso qStatus &lt;&gt; &quot;abandoned&quot; AndAlso qStatus &lt;&gt; &quot;deleted&quot; AndAlso qStatus &lt;&gt; &quot;successful&quot; Then&#xA;                If openIds.Contains(qRef) AndAlso Not localItemsToRemove.Contains(qRef) Then localItemsToRemove.Add(qRef)&#xA;                If releasedIds.Contains(qRef) AndAlso Not localItemsToRemove.Contains(qRef) Then localItemsToRemove.Add(qRef)&#xA;            End If&#xA;        Next&#xA;&#xA;        Dim keptOpen As Integer = openIds.Where(Function(id) Not localItemsToRemove.Contains(id)).ToList().Count&#xA;        Dim keptReleased As Integer = releasedIds.Where(Function(id) Not localItemsToRemove.Contains(id)).ToList().Count&#xA;        Dim schedOpens As Integer = openDiff + (If(openAvail.ContainsKey(username), openAvail(username), 0))&#xA;        Dim schedReleased As Integer = releasedDiff + (If(releasedAvail.ContainsKey(username), releasedAvail(username), 0))&#xA;        openDiff = schedOpens - keptOpen&#xA;        releasedDiff = schedReleased - keptReleased&#xA;    End If&#xA;&#xA;    If openDiff &gt; 0 Then&#xA;        For i As Integer = 1 To openDiff&#xA;            Dim newRow As DataRow = dtNewItems.NewRow()&#xA;            newRow(&quot;Name&quot;) = name&#xA;            newRow(&quot;Shift&quot;) = shift&#xA;            newRow(&quot;Shift Start&quot;) = shiftStart&#xA;            newRow(&quot;Shift End&quot;) = shiftEnd&#xA;            newRow(&quot;Remedy Username&quot;) = username&#xA;            newRow(&quot;ID&quot;) = $&quot;{today}_open_{stStr}{enStr}_{oCtr}&quot;&#xA;            newRow(&quot;Type&quot;) = &quot;Open&quot;&#xA;            bucket.Add(newRow)&#xA;            oCtr += 1&#xA;        Next&#xA;    ElseIf openDiff &lt; 0 AndAlso existingCounts.ContainsKey(username) Then&#xA;        Dim openIds As List(Of String) = CType(existingCounts(username)(&quot;OpenIds&quot;), List(Of String))&#xA;        For i As Integer = 0 To Math.Min(Math.Abs(openDiff), openIds.Count) - 1&#xA;            If Not localItemsToRemove.Contains(openIds(i)) Then localItemsToRemove.Add(openIds(i))&#xA;        Next&#xA;    End If&#xA;&#xA;    If releasedDiff &gt; 0 Then&#xA;        For i As Integer = 1 To releasedDiff&#xA;            Dim newRow As DataRow = dtNewItems.NewRow()&#xA;            newRow(&quot;Name&quot;) = name&#xA;            newRow(&quot;Shift&quot;) = shift&#xA;            newRow(&quot;Shift Start&quot;) = shiftStart&#xA;            newRow(&quot;Shift End&quot;) = shiftEnd&#xA;            newRow(&quot;Remedy Username&quot;) = username&#xA;            newRow(&quot;ID&quot;) = $&quot;{today}_released_{stStr}{enStr}_{rCtr}&quot;&#xA;            newRow(&quot;Type&quot;) = &quot;Released&quot;&#xA;            bucket.Add(newRow)&#xA;            rCtr += 1&#xA;        Next&#xA;    ElseIf releasedDiff &lt; 0 AndAlso existingCounts.ContainsKey(username) Then&#xA;        Dim releasedIds As List(Of String) = CType(existingCounts(username)(&quot;ReleasedIds&quot;), List(Of String))&#xA;        For i As Integer = 0 To Math.Min(Math.Abs(releasedDiff), releasedIds.Count) - 1&#xA;            If Not localItemsToRemove.Contains(releasedIds(i)) Then localItemsToRemove.Add(releasedIds(i))&#xA;        Next&#xA;    End If&#xA;&#xA;    If bucket.Count &gt; 0 Then newItemBuckets.Add(bucket)&#xA;Next&#xA;&#xA;lstItemsToRemove = localItemsToRemove&#xA;&#xA;Dim maxSlots As Integer = If(newItemBuckets.Count &gt; 0, newItemBuckets.Max(Function(b) b.Count), 0)&#xA;For idx As Integer = 0 To maxSlots - 1&#xA;    For Each bucket In newItemBuckets&#xA;        If idx &lt; bucket.Count Then&#xA;            dtNewItems.Rows.Add(bucket(idx).ItemArray)&#xA;        End If&#xA;    Next&#xA;Next&#xA;&#xA;dtNewTracker = dtOldTracker.Clone()&#xA;&#xA;For Each oldRow As DataRow In dtOldTracker.Rows&#xA;    Dim itemId As String = oldRow(&quot;ID&quot;).ToString()&#xA;    If Not lstItemsToRemove.Contains(itemId) Then&#xA;        dtNewTracker.ImportRow(oldRow)&#xA;    End If&#xA;Next&#xA;&#xA;For Each newItemRow As DataRow In dtNewItems.Rows&#xA;    dtNewTracker.ImportRow(newItemRow)&#xA;Next&#xA;&#xA;If dtNewTracker.Rows.Count &gt; 0 Then&#xA;    dtNewTracker = dtNewTracker.AsEnumerable() _&#xA;        .OrderBy(Function(r) r.Field(Of String)(&quot;Type&quot;)) _&#xA;        .ThenBy(Function(r) r.Field(Of DateTime)(&quot;Shift Start&quot;)) _&#xA;        .ThenBy(Function(r) r.Field(Of String)(&quot;ID&quot;)) _&#xA;        .CopyToDataTable()&#xA;End If" DisplayName="Invoke Code" sap:VirtualizedContainerService.HintSize="586,197" sap2010:WorkflowViewState.IdRef="InvokeCode_2">
+            <ui:InvokeCode.Arguments>
+              <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="jsonItemData ">[jsonItemData]</InArgument>
+              <InArgument x:TypeArguments="scg:IEnumerable(ui:QueueItem)" x:Key="lstqiTechnicians">[lstqiTechnicians]</InArgument>
+              <InArgument x:TypeArguments="sd:DataTable" x:Key="dtSchedule">[dtSchedule]</InArgument>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="dtNewItems">[dtNewItems]</OutArgument>
+              <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="lstItemsToRemove">[lstItemsToRemove]</OutArgument>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="dtDifferences">[dtDifferences]</OutArgument>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="dtNewTracker">[dtNewTracker]</OutArgument>
+              <InArgument x:TypeArguments="sd:DataTable" x:Key="dtOldTracker">[dtTracker]</InArgument>
+            </ui:InvokeCode.Arguments>
+          </ui:InvokeCode>
+          <If Condition="[dtDifferences.RowCount&gt;0]" sap:VirtualizedContainerService.HintSize="586,2724" sap2010:WorkflowViewState.IdRef="If_5">
+            <sap:WorkflowViewStateService.ViewState>
+              <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                <x:Boolean x:Key="IsPinned">False</x:Boolean>
+              </scg:Dictionary>
+            </sap:WorkflowViewStateService.ViewState>
+            <If.Then>
+              <Sequence DisplayName="Then" sap:VirtualizedContainerService.HintSize="552,2330" sap2010:WorkflowViewState.IdRef="Sequence_13">
+                <sap:WorkflowViewStateService.ViewState>
+                  <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                    <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                    <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                  </scg:Dictionary>
+                </sap:WorkflowViewStateService.ViewState>
+                <TryCatch DisplayName="Try Catch" sap:VirtualizedContainerService.HintSize="518,340" sap2010:WorkflowViewState.IdRef="TryCatch_3">
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                  <TryCatch.Try>
+                    <ui:DeleteFileX DisplayName="Delete File" sap:VirtualizedContainerService.HintSize="334,80" sap2010:WorkflowViewState.IdRef="DeleteFileX_1" Path="[strLocalFolderPath+&quot;\&quot;+strTrackerFileName]">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                          <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                    </ui:DeleteFileX>
+                  </TryCatch.Try>
+                  <TryCatch.Catches>
+                    <Catch x:TypeArguments="s1:Exception" sap:VirtualizedContainerService.HintSize="404,22" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                          <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                      <ActivityAction x:TypeArguments="s1:Exception">
+                        <ActivityAction.Argument>
+                          <DelegateInArgument x:TypeArguments="s1:Exception" Name="exception" />
+                        </ActivityAction.Argument>
+                        <i:Info_Log DisplayName="Info Log" sap:VirtualizedContainerService.HintSize="200,40" sap2010:WorkflowViewState.IdRef="Info_Log_2" StrMessage="[&quot;Tracker doesn't exist in &quot; + strLocalFolderPath+&quot;\&quot;+strTrackerFileName]" StrTag="info">
+                          <sap:WorkflowViewStateService.ViewState>
+                            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                              <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                              <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                            </scg:Dictionary>
+                          </sap:WorkflowViewStateService.ViewState>
+                        </i:Info_Log>
+                      </ActivityAction>
+                    </Catch>
+                  </TryCatch.Catches>
+                </TryCatch>
+                <ui:WriteRange StartingCell="{x:Null}" WorkbookPathResource="{x:Null}" AddHeaders="True" DataTable="[dtNewTracker]" DisplayName="Write Range Workbook" sap:VirtualizedContainerService.HintSize="518,148" sap2010:WorkflowViewState.IdRef="WriteRange_2" SheetName="[in_dctRoboText(&quot;TechniciansSheetName&quot;)]" WorkbookPath="[strLocalFolderPath+&quot;\&quot;+strTrackerFileName]" />
+                <s:SharePoint_UploadFile out_boolActionSuccess="{x:Null}" sap:VirtualizedContainerService.HintSize="518,173" sap2010:WorkflowViewState.IdRef="SharePoint_UploadFile_3" in_intNumberOfRetries="[intNumberOfRetries]" in_sstrBotPassword="[crdSpCredential.SecurePassword]" in_strBotUserName="[crdSpCredential.Username]" in_strFileLocalPath="[strLocalFolderPath+&quot;\&quot;+strTrackerFileName]" in_strSPAppID="[strAppID]" in_strSPRelativePath="[strTrackerRelativePath]" in_strSPSiteURL="[strSpSiteUrl]" in_strSPTenantID="[strSPTenantID]" in_strSpSiteID="[strSpSiteID]" in_tspRetryInterval="[tspRetryInterval]" />
+                <If Condition="[dtNewItems.RowCount&gt;0]" sap:VirtualizedContainerService.HintSize="518,622" sap2010:WorkflowViewState.IdRef="If_6">
+                  <If.Then>
+                    <Sequence DisplayName="Then" sap:VirtualizedContainerService.HintSize="416,228" sap2010:WorkflowViewState.IdRef="Sequence_15">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="HBBWiFiXperts_Loader_UploadTechniciansItems - Invoke Workflow File (Subprocess\HBBWiFiXperts_Loader_UploadTechniciansItems.xaml)" sap:VirtualizedContainerService.HintSize="382,168" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_7" UnSafe="False" WorkflowFileName="Subprocess\HBBWiFiXperts_Loader_UploadTechniciansItems.xaml">
+                        <ui:InvokeWorkflowFile.Arguments>
+                          <InArgument x:TypeArguments="x:TimeSpan" x:Key="in_tspTimespanDelay">[Timespan.Parse(in_dctRoboText("RetryScopeInterval"))]</InArgument>
+                          <InArgument x:TypeArguments="scg:Dictionary(x:String, sn:NetworkCredential)" x:Key="in_crddctRoboCred">[in_crddctRoboCred]</InArgument>
+                          <InArgument x:TypeArguments="x:TimeSpan" x:Key="in_tspRetryScopeInterval">[Timespan.Parse(in_dctRoboText("RetryScopeInterval"))]</InArgument>
+                          <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Boolean)" x:Key="in_booldctRoboBool">[in_booldctRoboBool]</InArgument>
+                          <InArgument x:TypeArguments="sd:DataTable" x:Key="in_dtQueueItemInfo">[dtNewItems]</InArgument>
+                          <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="in_dctRoboText">[in_dctRoboText]</InArgument>
+                          <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Int32)" x:Key="in_intdctRoboInt">[in_intdctRoboInt]</InArgument>
+                        </ui:InvokeWorkflowFile.Arguments>
+                      </ui:InvokeWorkflowFile>
+                    </Sequence>
+                  </If.Then>
+                  <If.Else>
+                    <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="416,224" sap2010:WorkflowViewState.IdRef="Sequence_16">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                      <i:Info_Log DisplayName="Info Log" sap:VirtualizedContainerService.HintSize="382,164" sap2010:WorkflowViewState.IdRef="Info_Log_5" StrMessage="No new slots to upload" StrTag="info" />
+                    </Sequence>
+                  </If.Else>
+                </If>
+                <If Condition="[lstItemsToRemove.Count&gt;0]" sap:VirtualizedContainerService.HintSize="518,987" sap2010:WorkflowViewState.IdRef="If_7">
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                  <If.Then>
+                    <Sequence DisplayName="Then" sap:VirtualizedContainerService.HintSize="484,602" sap2010:WorkflowViewState.IdRef="Sequence_17">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                      <ui:ForEach x:TypeArguments="x:String" CurrentIndex="{x:Null}" DisplayName="For Each currentItem" sap:VirtualizedContainerService.HintSize="450,542" sap2010:WorkflowViewState.IdRef="ForEach`1_3" Values="[lstItemsToRemove]">
+                        <ui:ForEach.Body>
+                          <ActivityAction x:TypeArguments="x:String">
+                            <ActivityAction.Argument>
+                              <DelegateInArgument x:TypeArguments="x:String" Name="currentItem" />
+                            </ActivityAction.Argument>
+                            <Sequence DisplayName="Body" sap:VirtualizedContainerService.HintSize="416,405" sap2010:WorkflowViewState.IdRef="Sequence_19">
+                              <Sequence.Variables>
+                                <Variable x:TypeArguments="s1:DateTime" Name="dtmUploadTime" />
+                              </Sequence.Variables>
+                              <sap:WorkflowViewStateService.ViewState>
+                                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                                  <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                                </scg:Dictionary>
+                              </sap:WorkflowViewStateService.ViewState>
+                              <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="HBBWiFiXperts_Worker_GetTechnician - Invoke Workflow File (Subprocess\HBBWiFiXperts_Worker_GetTechnician.xaml)" sap:VirtualizedContainerService.HintSize="382,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_10" UnSafe="False" WorkflowFileName="Subprocess\HBBWiFiXperts_Worker_GetTechnician.xaml">
+                                <ui:InvokeWorkflowFile.Arguments>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="in_dctRoboText">[in_dctroboText]</InArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Int32)" x:Key="in_intdctRoboInt">[in_intdctroboInt]</InArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Boolean)" x:Key="in_booldctRoboBool">[in_booldctroboBool]</InArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="in_dctCaseText">[in_dctcaseText]</InArgument>
+                                  <InArgument x:TypeArguments="x:TimeSpan" x:Key="in_tspRetryScopeInterval">[Timespan.Parse(in_dctRoboText("RetryScopeInterval"))]</InArgument>
+                                  <OutArgument x:TypeArguments="ui:QueueItem" x:Key="out_qiTransactionItem">[qiTechnicianItem]</OutArgument>
+                                  <OutArgument x:TypeArguments="s1:DateTime" x:Key="out_dtmTransactionUploadTime">[dtmUploadTime]</OutArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, sn:NetworkCredential)" x:Key="in_crddctRoboCred">[in_crddctroboCred]</InArgument>
+                                  <OutArgument x:TypeArguments="njl:JObject" x:Key="out_jobjTransactionJson">[jobjTechnicianJson]</OutArgument>
+                                  <InArgument x:TypeArguments="x:String" x:Key="in_strReferencePrefix">[currentItem]</InArgument>
+                                </ui:InvokeWorkflowFile.Arguments>
+                              </ui:InvokeWorkflowFile>
+                              <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="HBBWiFiXperts_Worker_SetTechnician - Invoke Workflow File (Subprocess\HBBWiFiXperts_Worker_SetTechnician.xaml)" sap:VirtualizedContainerService.HintSize="382,168" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_9" UnSafe="False" WorkflowFileName="Subprocess\HBBWiFiXperts_Worker_SetTechnician.xaml">
+                                <ui:InvokeWorkflowFile.Arguments>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="in_dctRoboText">[in_dctroboText]</InArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Int32)" x:Key="in_intdctRoboInt">[in_intdctroboInt]</InArgument>
+                                  <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Boolean)" x:Key="in_booldctRoboBool">[in_booldctroboBool]</InArgument>
+                                  <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_qiTransactionItem">[qiTechnicianItem]</InArgument>
+                                  <InArgument x:TypeArguments="x:String" x:Key="in_strExceptionMessage">[String.Empty]</InArgument>
+                                  <InArgument x:TypeArguments="x:String" x:Key="in_strExecutionStatus">BusinessException</InArgument>
+                                  <InArgument x:TypeArguments="njl:JObject" x:Key="in_jobjtransactionJson">[jobjTechnicianJson]</InArgument>
+                                  <InArgument x:TypeArguments="x:String" x:Key="in_strRemedyTicketRef">[String.Empty]</InArgument>
+                                </ui:InvokeWorkflowFile.Arguments>
+                              </ui:InvokeWorkflowFile>
+                            </Sequence>
+                          </ActivityAction>
+                        </ui:ForEach.Body>
+                      </ui:ForEach>
+                    </Sequence>
+                  </If.Then>
+                  <If.Else>
+                    <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="416,224" sap2010:WorkflowViewState.IdRef="Sequence_18">
+                      <sap:WorkflowViewStateService.ViewState>
+                        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                        </scg:Dictionary>
+                      </sap:WorkflowViewStateService.ViewState>
+                      <i:Info_Log DisplayName="Info Log" sap:VirtualizedContainerService.HintSize="382,164" sap2010:WorkflowViewState.IdRef="Info_Log_6" StrMessage="No old slots to remove" StrTag="info" />
+                    </Sequence>
+                  </If.Else>
+                </If>
+              </Sequence>
+            </If.Then>
+            <If.Else>
+              <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="416,224" sap2010:WorkflowViewState.IdRef="Sequence_14">
+                <sap:WorkflowViewStateService.ViewState>
+                  <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                    <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                    <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                  </scg:Dictionary>
+                </sap:WorkflowViewStateService.ViewState>
+                <i:Info_Log DisplayName="Info Log" sap:VirtualizedContainerService.HintSize="382,164" sap2010:WorkflowViewState.IdRef="Info_Log_7" StrMessage="Queue items are synced with the schedule file on sharepoint" StrTag="info" />
+              </Sequence>
+            </If.Else>
+          </If>
+          <Assign DisplayName="Status success" sap:VirtualizedContainerService.HintSize="586,114" sap2010:WorkflowViewState.IdRef="Assign_4">
+            <Assign.To>
+              <OutArgument x:TypeArguments="x:Boolean">[boolActionSuccess]</OutArgument>
+            </Assign.To>
+            <Assign.Value>
+              <InArgument x:TypeArguments="x:Boolean">[True]</InArgument>
+            </Assign.Value>
+          </Assign>
+          <i:Process_Monitoring___Component___End StrExecutionMessage="{x:Null}" BoolSuccess="True" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="586,215" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_1" StrFileName="[strComponentName]" />
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="s1:Exception" sap:VirtualizedContainerService.HintSize="624,22" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+              <x:Boolean x:Key="IsPinned">False</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ActivityAction x:TypeArguments="s1:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s1:Exception" Name="exception" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Exception Sequence" sap:VirtualizedContainerService.HintSize="416,55" sap2010:WorkflowViewState.IdRef="Sequence_5">
+              <sap:WorkflowViewStateService.ViewState>
+                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                  <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                  <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                </scg:Dictionary>
+              </sap:WorkflowViewStateService.ViewState>
+              <i:Process_Monitoring___Component___End BoolSuccess="False" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="845,25" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_3" StrExecutionMessage="[exception.Message]" StrFileName="[strComponentName]" />
+              <Sequence sap2010:Annotation.AnnotationText="A logic component fail is virtually guaranteed to repeat perpetually, as case data is not expected to change in between reattempts" DisplayName="No Recovery Sequence" sap:VirtualizedContainerService.HintSize="845,81" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                <sap:WorkflowViewStateService.ViewState>
+                  <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                    <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                    <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                  </scg:Dictionary>
+                </sap:WorkflowViewStateService.ViewState>
+                <Assign sap2010:Annotation.AnnotationText="Applies when no rethrow is done, the value passes out to the calling point" DisplayName="No recovery (via argument)" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_6">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:Boolean">[out_boolNoRecovery]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:Boolean">[True]</InArgument>
+                  </Assign.Value>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                </Assign>
+                <Assign sap2010:Annotation.AnnotationText="Applies when a rethrow is done, as rethrows ignore all Out arguments, even if values have previously been assigned to them" DisplayName="No recovery (via exception)" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_7">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:Object">[exception.Data("NoRecovery")]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:Object">[True]</InArgument>
+                  </Assign.Value>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                </Assign>
+              </Sequence>
+              <If Condition="[in_boolRethrow]" DisplayName="Rethrow?" sap:VirtualizedContainerService.HintSize="845,396" sap2010:WorkflowViewState.IdRef="If_4">
+                <If.Then>
+                  <Sequence DisplayName="Rethrow Ex" sap:VirtualizedContainerService.HintSize="400,201" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_1" StrMessage="[exception.Message]" StrTag="error" />
+                    <Rethrow sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Rethrow_3" />
+                  </Sequence>
+                </If.Then>
+                <If.Else>
+                  <Sequence DisplayName="Return Ex" sap:VirtualizedContainerService.HintSize="400,237" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_2" StrMessage="[exception.Message]" StrTag="error" />
+                    <Assign DisplayName="Exception message" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_8">
+                      <Assign.To>
+                        <OutArgument x:TypeArguments="x:String">[out_strExceptionMessage]</OutArgument>
+                      </Assign.To>
+                      <Assign.Value>
+                        <InArgument x:TypeArguments="x:String">[exception.Message]</InArgument>
+                      </Assign.Value>
+                    </Assign>
+                  </Sequence>
+                </If.Else>
+              </If>
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+  </Sequence>
+</Activity>

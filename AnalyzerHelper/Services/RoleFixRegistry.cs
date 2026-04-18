@@ -18,7 +18,7 @@ namespace AnalyzerHelper.Services
                 DisplayName = HumanizeRuleName(r.RuleName),
                 Description = r.DefaultRecommendation,
                 Category = FixCategory.AutoFix
-            }).ToList();
+            }).OrderBy(r => r.RuleId).ToList();
         }
 
         public static IReadOnlyList<RoleFixItem> GetNeedInteractionRoles()
@@ -29,7 +29,7 @@ namespace AnalyzerHelper.Services
                 DisplayName = HumanizeRuleName(r.RuleName),
                 Description = r.DefaultRecommendation,
                 Category = FixCategory.RequiresUserInteraction
-            }).ToList();
+            }).OrderBy(r => r.RuleId).ToList();
         }
 
         public static IReadOnlyList<AnalyzerReportRow> GetReportRows() => new List<AnalyzerReportRow>();

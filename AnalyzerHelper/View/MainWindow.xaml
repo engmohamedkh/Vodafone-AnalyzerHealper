@@ -80,21 +80,17 @@
         <!-- ═══════════════════════════════════════════════════
              THIN SCROLLBAR
              ═══════════════════════════════════════════════════ -->
-        <Style x:Key="ThinScrollBar" TargetType="FrameworkElement">
-            <Style.Resources>
-                <Style TargetType="ScrollBar">
-                    <Setter Property="Width"    Value="8"/>
-                    <Setter Property="MinWidth" Value="8"/>
-                    <Setter Property="Height"   Value="8"/>
-                    <Setter Property="MinHeight" Value="8"/>
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Width" Value="10"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Style.Resources>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width"    Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
+            <Setter Property="Height"   Value="8"/>
+            <Setter Property="MinHeight" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Width" Value="10"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- ═══════════════════════════════════════════════════
@@ -246,8 +242,6 @@
                 <ScrollViewer Grid.Row="6"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
-                              Margin="0,1,0,0"
-                              Style="{StaticResource ThinScrollBar}"
                               PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
                     <TreeView x:Name="SolutionFilesTree"
                               BorderThickness="0" Background="Transparent"
@@ -425,7 +419,6 @@
                                 </StackPanel>
                             </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                          Style="{StaticResource ThinScrollBar}"
                                           PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
                                 <ListBox x:Name="AutoFixList"
                                          BorderThickness="0" Background="Transparent"
@@ -485,7 +478,6 @@
                                 </StackPanel>
                             </Grid>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                          Style="{StaticResource ThinScrollBar}"
                                           PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
                                 <ListBox x:Name="UserInputList"
                                          BorderThickness="0" Background="Transparent"
@@ -517,7 +509,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- Toolbar row -->
@@ -576,6 +567,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="🔍" FontSize="11" VerticalAlignment="Center"
                                                Margin="0,0,6,0" Foreground="#626F86"/>
@@ -616,9 +608,16 @@
                                                Foreground="#626F86" FontWeight="SemiBold"/>
                                     <ComboBox x:Name="FilterFilePath" Grid.Column="8" MinWidth="150" IsEditable="True"
                                               FontSize="10" Padding="4,2"
-                                              VerticalContentAlignment="Center"
+                                              VerticalContentAlignment="Center" Margin="0,0,8,0"
                                               SelectionChanged="ReportFilter_Changed"
                                               TextBoxBase.TextChanged="ReportFilter_TextChanged"/>
+                                    
+                                    <!-- Reset Filters button -->
+                                    <Button x:Name="ResetSearchFilterBtn" Grid.Column="9"
+                                            Content="Reset" Padding="8,1" MinHeight="20"
+                                            FontSize="10" FontWeight="Medium" VerticalAlignment="Center"
+                                            Click="ResetFilters_Click" Foreground="#4A5568"
+                                            ToolTip="Clear all search filters"/>
                                 </Grid>
                             </Border>
 
@@ -832,14 +831,6 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
 
-                                <!-- Bottom area: selected rules status -->
-                                <Border Grid.Row="4" Background="#F0F4F8" CornerRadius="3" Padding="8,6" Margin="0,4,0,0">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="ℹ" FontSize="12" Foreground="#1565C0" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock x:Name="ReportTabBottomText" Text="No rules selected. All available rules will be validated by default."
-                                                   FontSize="11" Foreground="#44546F" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
                             </Grid>
                     </TabItem>
 
@@ -895,8 +886,7 @@
                     <!-- Rule details -->
                     <Border Grid.Row="2" Padding="10,4" MinHeight="36" MaxHeight="80">
                         <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      Style="{StaticResource ThinScrollBar}">
+                                      HorizontalScrollBarVisibility="Disabled">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
