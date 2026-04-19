@@ -23,7 +23,12 @@ namespace AnalyzerHelper.View
             Owner = System.Windows.Application.Current?.MainWindow;
 
             int fileCount = rows.Select(r => r.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-            HeaderText.Text = $"{rows.Count} branch(es) across {fileCount} file(s) missing logging. Enter message for each.";
+            HeaderText.Text = $"{rows.Count} branch(es) across {fileCount} file(s) missing logging.";
+
+            foreach (var row in _rows)
+            {
+                row.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(BranchLogRow.AddLog)) UpdateBottomStatus(); };
+            }
 
             Grid.ItemsSource = _rows;
             UpdateBottomStatus();
@@ -38,11 +43,31 @@ namespace AnalyzerHelper.View
 
         private void UpdateBottomStatus()
         {
-            int selected = Grid.SelectedItems.Count;
+            int selectedRows = Grid.SelectedItems.Count;
             int total = _rows.Count;
-            BottomStatusText.Text = selected == 0
-                ? $"All {total} branch(es) will be updated. Click a row to focus."
-                : $"{selected} of {total} selected.";
+            int checkedCount = _rows.Count(r => r.AddLog);
+
+            CheckedCountText.Text = $"{checkedCount} of {total} checked";
+            ApplyCountLabel.Text = $"{checkedCount} branch(es) to be fixed";
+            
+            ApplyButton.IsEnabled = checkedCount > 0;
+            ApplyButton.Content = checkedCount == total ? "✔ Apply All" : "✔ Apply Selected";
+
+            BottomStatusText.Text = selectedRows == 0
+                ? "Tick the checkboxes for branches you want to fix, then click Apply."
+                : $"{selectedRows} rows highlighted. (Use checkboxes to filter apply)";
+        }
+
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var row in _rows) row.AddLog = true;
+            UpdateBottomStatus();
+        }
+
+        private void UnselectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var row in _rows) row.AddLog = false;
+            UpdateBottomStatus();
         }
 
         private void Grid_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -97,6 +122,15 @@ namespace AnalyzerHelper.View
         public string Type { get; set; } = ""; // If, FlowDecision, FlowSwitch
         public string BranchDescription { get; set; } = "";
         public int InsertIndex { get; set; }
+
+        private string _logType = "Info_Log";
+        public string LogType
+        {
+            get => _logType;
+            set { if (_logType == value) return; _logType = value; OnPropertyChanged(nameof(LogType)); }
+        }
+
+        public static List<string> AvailableLogTypes { get; } = new List<string> { "Info_Log", "Error_Log" };
 
         public string Message
         {

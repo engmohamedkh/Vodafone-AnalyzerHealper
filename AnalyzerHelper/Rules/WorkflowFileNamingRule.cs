@@ -9,6 +9,7 @@ using System.Xml.Linq;
 using AnalyzerHelper.Interfaces;
 using AnalyzerHelper.Models;
 using AnalyzerHelper.View;
+using System.Text.RegularExpressions;
 
 namespace AnalyzerHelper.Rules
 {
@@ -24,7 +25,7 @@ namespace AnalyzerHelper.Rules
 	/// </summary>
 	public sealed class WorkflowFileNamingRule : IBatchAnalyzerRuleWithFix
 	{
-		public string RuleId => "VF-015";
+		public string RuleId => "VF-016";
 		public string RuleName => "WorkflowFileNaming";
 		public string DefaultRecommendation =>
 			"File naming convention not followed. Subprocess: {ShortName}_{Stage}_{WorkflowName}.xaml, Logic: {ShortName}_{WorkflowName}.xaml. Use Fix to rename and update internals.";
@@ -145,13 +146,21 @@ namespace AnalyzerHelper.Rules
 			_batchProcessStage = null;
 			_renameMap.Clear();
 
-			// Check if any files actually need renaming
+			// Check if any files actually need renaming (must be in Subprocess or Logic)
 			bool hasSubprocess = filePaths.Any(IsInSubprocessFolder);
+			bool hasLogic = filePaths.Any(IsInLogicFolder);
+
+			if (!hasSubprocess && !hasLogic)
+			{
+				_batchCancelled = true;
+				return;
+			}
+
 			var dialog = new RenameConfigWindow(requireStage: hasSubprocess);
 			if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.ShortName))
 			{
 				_batchCancelled = true;
-				return;
+				throw new OperationCanceledException($"User cancelled the {RuleName} batch fix dialog.");
 			}
 
 			_batchShortName = dialog.ShortName.Trim();
@@ -223,7 +232,7 @@ namespace AnalyzerHelper.Rules
 				// Fallback: single-file mode
 				var dialog = new RenameConfigWindow(requireStage: isSubprocess);
 				if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.ShortName))
-					return false;
+					throw new OperationCanceledException($"User cancelled the {RuleName} fix dialog.");
 
 				shortName = dialog.ShortName.Trim();
 				processStage = isSubprocess ? (dialog.ProcessStage?.Trim() ?? "") : "";
@@ -290,19 +299,10 @@ namespace AnalyzerHelper.Rules
 		// =====================================================================
 		private void UpdateWorkflowFileReferences(string oldFilePath, string newFilePath)
 		{
-			// Build the relative paths as used in WorkflowFileName attributes
-			// e.g. "Subprocess\OldName.xaml" → "Subprocess\NewName.xaml"
 			string oldFileName = Path.GetFileName(oldFilePath);
 			string newFileName = Path.GetFileName(newFilePath);
-			string parentFolder = Path.GetFileName(Path.GetDirectoryName(oldFilePath) ?? "");
 
-			// Patterns to find and replace (both slash directions)
-			string oldRef1 = $"{parentFolder}\\{oldFileName}";
-			string oldRef2 = $"{parentFolder}/{oldFileName}";
-			string newRef1 = $"{parentFolder}\\{newFileName}";
-			string newRef2 = $"{parentFolder}/{newFileName}";
-
-			// Determine the project root to scan
+			// Patterns to scan
 			string rootToScan = _batchRootFolder;
 			if (string.IsNullOrEmpty(rootToScan))
 				rootToScan = Path.GetDirectoryName(Path.GetDirectoryName(oldFilePath) ?? "") ?? "";
@@ -310,55 +310,34 @@ namespace AnalyzerHelper.Rules
 			if (string.IsNullOrEmpty(rootToScan) || !Directory.Exists(rootToScan))
 				return;
 
-			// Scan all .xaml files in the project
+			// Regex to find WorkflowFileName attribute that ends with the old filename (allowing any folder prefix and any slash)
+			// Matches: WorkflowFileName="any\path\old.xaml" or WorkflowFileName="old.xaml"
+			// Group 1: any folder prefix
+			string patternStr = $@"WorkflowFileName=[""']([^""']*(?:[\\/])?){Regex.Escape(oldFileName)}[""']";
+			var regex = new Regex(patternStr, RegexOptions.IgnoreCase);
+
 			try
 			{
 				var allXaml = Directory.GetFiles(rootToScan, "*.xaml", SearchOption.AllDirectories);
 				foreach (var xamlPath in allXaml)
 				{
-					// Don't re-process the file we just renamed
 					if (string.Equals(xamlPath, newFilePath, StringComparison.OrdinalIgnoreCase))
-						continue;
-					if (string.Equals(xamlPath, oldFilePath, StringComparison.OrdinalIgnoreCase))
 						continue;
 
 					try
 					{
 						string xamlContent = File.ReadAllText(xamlPath);
-						bool modified = false;
-
-						// Replace WorkflowFileName references
-						if (xamlContent.Contains(oldRef1, StringComparison.OrdinalIgnoreCase))
+						if (regex.IsMatch(xamlContent))
 						{
-							xamlContent = xamlContent.Replace(oldRef1, newRef1, StringComparison.OrdinalIgnoreCase);
-							modified = true;
+							string updatedContent = regex.Replace(xamlContent, $"WorkflowFileName=\"$1{newFileName}\"");
+							if (updatedContent != xamlContent)
+								File.WriteAllText(xamlPath, updatedContent);
 						}
-						if (xamlContent.Contains(oldRef2, StringComparison.OrdinalIgnoreCase))
-						{
-							xamlContent = xamlContent.Replace(oldRef2, newRef2, StringComparison.OrdinalIgnoreCase);
-							modified = true;
-						}
-
-						// Also replace bare filename references (without folder prefix)
-						if (xamlContent.Contains(oldFileName, StringComparison.OrdinalIgnoreCase))
-						{
-							// Only replace in WorkflowFileName attributes to be safe
-							string pattern1 = $"WorkflowFileName=\"{oldFileName}\"";
-							string replacement1 = $"WorkflowFileName=\"{newFileName}\"";
-							if (xamlContent.Contains(pattern1, StringComparison.OrdinalIgnoreCase))
-							{
-								xamlContent = xamlContent.Replace(pattern1, replacement1, StringComparison.OrdinalIgnoreCase);
-								modified = true;
-							}
-						}
-
-						if (modified)
-							File.WriteAllText(xamlPath, xamlContent);
 					}
-					catch { /* skip unreadable/unwritable files */ }
+					catch { }
 				}
 			}
-			catch { /* skip if directory scan fails */ }
+			catch { }
 		}
 
 		// =====================================================================
@@ -379,22 +358,26 @@ namespace AnalyzerHelper.Rules
 			return first;
 		}
 
-		/// <summary>True if filePath lies under a directory named exactly "Subprocess" (path segment).</summary>
+		/// <summary>True if filePath lies under a directory named like "Subprocess" (path segment).</summary>
 		private static bool IsInSubprocessFolder(string filePath)
 		{
 			if (string.IsNullOrWhiteSpace(filePath)) return false;
 			string normalized = filePath.Replace('\\', '/').TrimEnd('/');
 			var segments = normalized.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-			return segments.Any(s => s.Equals("Subprocess", StringComparison.OrdinalIgnoreCase));
+			
+			string[] variants = { "Subprocess", "Subprocesses", "Sub-process", "Sub-processes", "Sub Process", "Sub Processes" };
+			return segments.Any(s => variants.Any(v => s.Equals(v, StringComparison.OrdinalIgnoreCase)));
 		}
 
-		/// <summary>True if filePath lies under a directory named exactly "Logic" (path segment).</summary>
+		/// <summary>True if filePath lies under a directory named like "Logic" (path segment).</summary>
 		private static bool IsInLogicFolder(string filePath)
 		{
 			if (string.IsNullOrWhiteSpace(filePath)) return false;
 			string normalized = filePath.Replace('\\', '/').TrimEnd('/');
 			var segments = normalized.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-			return segments.Any(s => s.Equals("Logic", StringComparison.OrdinalIgnoreCase));
+			
+			string[] variants = { "Logic", "Logics", "Workflow Logic", "Workflows" };
+			return segments.Any(s => variants.Any(v => s.Equals(v, StringComparison.OrdinalIgnoreCase)));
 		}
 
 		private static string ExtractWorkflowName(string stem, bool isSubprocess)

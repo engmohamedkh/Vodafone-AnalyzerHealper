@@ -19,7 +19,7 @@ namespace AnalyzerHelper.Rules
     /// </summary>
     public sealed class HandleCommentedActivitiesRule : IBatchAnalyzerRuleWithFix
     {
-        public string RuleId => "VF-014";
+        public string RuleId => "VF-015";
         public string RuleName => "HandleCommentedActivities";
         public string DefaultRecommendation =>
             "Commented-out activities found. Use the Fix tab and choose for each: Delete (remove) or Uncomment (restore).";
@@ -104,7 +104,7 @@ namespace AnalyzerHelper.Rules
                 {
                     _batchCancelled = true;
                     _batchItems = null;
-                    return;
+                    throw new OperationCanceledException($"User cancelled the {RuleName} batch fix dialog.");
                 }
 
                 foreach (var item in allItems)
@@ -138,7 +138,7 @@ namespace AnalyzerHelper.Rules
                 if (items.Count == 0) return false;
 
                 var dialog = new CommentReviewWindow(items, filePath);
-                if (dialog.ShowDialog() != true) return false;
+                if (dialog.ShowDialog() != true) throw new OperationCanceledException($"User cancelled the {RuleName} fix dialog.");
             }
 
             bool changed = false;

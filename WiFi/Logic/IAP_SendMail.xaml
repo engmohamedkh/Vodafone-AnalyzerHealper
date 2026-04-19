@@ -1,0 +1,202 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="SendMail" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:i="clr-namespace:IAP_Logging;assembly=IAP.Logging" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:sn="clr-namespace:System.Net;assembly=System.Net.Primitives" xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_strMailSubject" Type="InArgument(x:String)" />
+    <x:Property Name="in_strMailBody" Type="InArgument(x:String)" />
+    <x:Property Name="in_strTo" Type="InArgument(x:String)" />
+    <x:Property Name="in_strCC" Type="InArgument(x:String)" />
+    <x:Property Name="in_ieAttachments" Type="InArgument(scg:IEnumerable(x:String))" />
+    <x:Property Name="in_crddctRoboCred" Type="InArgument(scg:Dictionary(x:String, sn:NetworkCredential))" />
+    <x:Property Name="in_dctRoboText" Type="InArgument(scg:Dictionary(x:String, x:String))" />
+    <x:Property Name="in_strUser" Type="InArgument(x:String)" />
+    <x:Property Name="in_intdctRoboInt" Type="InArgument(scg:Dictionary(x:String, x:Int32))" />
+    <x:Property Name="in_boolRethrow" Type="InArgument(x:Boolean)" />
+    <x:Property Name="out_boolFailedToSend" Type="OutArgument(x:Boolean)" />
+  </x:Members>
+  <this:SendMail.in_boolRethrow>
+    <InArgument x:TypeArguments="x:Boolean" />
+  </this:SendMail.in_boolRethrow>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap:VirtualizedContainerService.HintSize>1352,935</sap:VirtualizedContainerService.HintSize>
+  <sap2010:WorkflowViewState.IdRef>SendMail_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>IAP_Logging</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Activities.Validation</x:String>
+      <x:String>System.Activities.XamlIntegration</x:String>
+      <x:String>System.Collections</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Data</x:String>
+      <x:String>System.Diagnostics</x:String>
+      <x:String>System.Drawing</x:String>
+      <x:String>System.Globalization</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net.Mail</x:String>
+      <x:String>System.Reflection</x:String>
+      <x:String>System.Runtime.InteropServices</x:String>
+      <x:String>System.Runtime.Serialization</x:String>
+      <x:String>System.Security</x:String>
+      <x:String>System.Windows.Markup</x:String>
+      <x:String>System.Xml</x:String>
+      <x:String>System.Xml.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>IAP.Logging</AssemblyReference>
+      <AssemblyReference>Microsoft.Bcl.AsyncInterfaces</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>mscorlib</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>PresentationCore</AssemblyReference>
+      <AssemblyReference>PresentationFramework</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.Composition</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Data</AssemblyReference>
+      <AssemblyReference>System.Data.DataSetExtensions</AssemblyReference>
+      <AssemblyReference>System.Drawing</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Linq.Async</AssemblyReference>
+      <AssemblyReference>System.Memory</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization</AssemblyReference>
+      <AssemblyReference>System.ServiceModel</AssemblyReference>
+      <AssemblyReference>System.ValueTuple</AssemblyReference>
+      <AssemblyReference>System.Xaml</AssemblyReference>
+      <AssemblyReference>System.Xml</AssemblyReference>
+      <AssemblyReference>System.Xml.Linq</AssemblyReference>
+      <AssemblyReference>UiPath.Cryptography</AssemblyReference>
+      <AssemblyReference>UiPath.CV</AssemblyReference>
+      <AssemblyReference>UiPath.Excel</AssemblyReference>
+      <AssemblyReference>UiPath.Mail</AssemblyReference>
+      <AssemblyReference>UiPath.MicrosoftOffice365.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.OCR.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.Studio.Constants</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UIAutomationCore</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>WindowsBase</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="This is a wrapper for sending mails functionalities.&#xA;&#xA;CheckMailRecipients: it's responsible for validating the provided addresses whether it's valid/allowed or not&#xA;&#xA;You have to use one of the below workflows:&#xA;- SendOutlookMail&#xA;- SendExchangeMail&#xA;&#xA;&gt;&gt; Comment/Delete the unused one.&#xA;&gt;&gt; SendExchangeMail is commented by default." DisplayName="SendMail" sap:VirtualizedContainerService.HintSize="500,870" sap2010:WorkflowViewState.IdRef="Sequence_3">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="IAP_SendMail" Name="strComponentName" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+        <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <i:Process_Monitoring___Component___Start DisplayName="Process Monitoring - Component - Start" sap:VirtualizedContainerService.HintSize="438,25" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___Start_1" StrFileName="[strComponentName]" />
+    <TryCatch DisplayName="Try Catch" sap:VirtualizedContainerService.HintSize="438,517" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+      <TryCatch.Try>
+        <Sequence DisplayName="Send mail Sequence" sap:VirtualizedContainerService.HintSize="400,289" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke IAP_SendMSGraphMail workflow" sap:VirtualizedContainerService.HintSize="338,113" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_6" UnSafe="False" WorkflowFileName="Logic\IAP_SendMSGraphMail.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strTenantID">[in_dctRoboText("MSGraphTenantID")]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strAppID">[in_dctRoboText("MSGraphAppID")]</InArgument>
+              <InArgument x:TypeArguments="ss:SecureString" x:Key="in_sstrSecret">[in_crddctRoboCred("MSGraphSecret").SecurePassword]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strMailSubject">[in_strMailSubject]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strMailBody">[in_strMailBody]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strTo">[in_strTo]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strCC">[in_strCC]</InArgument>
+              <InArgument x:TypeArguments="scg:IEnumerable(x:String)" x:Key="in_ieAttachments">[in_ieAttachments]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strUser">[in_strUser]</InArgument>
+              <InArgument x:TypeArguments="x:Int32" x:Key="in_intMsGraphRetryNum">[in_intdctRoboInt("MSGraph_RetryNumber")]</InArgument>
+              <InArgument x:TypeArguments="x:TimeSpan" x:Key="in_tspMsGraphRetryInterval">[TimeSpan.Parse(in_dctRoboText("MSGraph_RetryInterval"))]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <i:Process_Monitoring___Component___End StrExecutionMessage="{x:Null}" BoolSuccess="True" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_1" StrFileName="[strComponentName+&quot; Ended&quot;]" />
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="s:Exception" sap:VirtualizedContainerService.HintSize="404,21" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+              <x:Boolean x:Key="IsPinned">False</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Exception Sequence" sap:VirtualizedContainerService.HintSize="400,81" sap2010:WorkflowViewState.IdRef="Sequence_6">
+              <sap:WorkflowViewStateService.ViewState>
+                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                  <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                  <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                </scg:Dictionary>
+              </sap:WorkflowViewStateService.ViewState>
+              <i:Error_Log DisplayName="Error Log - SE (Failed)" sap:VirtualizedContainerService.HintSize="845,25" sap2010:WorkflowViewState.IdRef="Error_Log_1" StrMessage="[strComponentName + &quot;, Failed to execute successfully due to the following exception:&quot;+ &quot; &quot; +&#xA;&quot;ExMessage: &quot; + exception.Message + &quot; &quot; +&#xA;&quot;ExSource: &quot; + exception.Source + &quot; &quot;]" StrTag="error" />
+              <i:Process_Monitoring___Component___End BoolSuccess="False" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="845,25" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_3" StrExecutionMessage="[exception.Message]" StrFileName="[strComponentName]" />
+              <If Condition="[in_boolRethrow]" DisplayName="Rethrow?" sap:VirtualizedContainerService.HintSize="845,396" sap2010:WorkflowViewState.IdRef="If_1">
+                <If.Then>
+                  <Sequence DisplayName="Rethrow Ex" sap:VirtualizedContainerService.HintSize="400,201" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_2" StrMessage="[exception.Message]" StrTag="error" />
+                    <Rethrow DisplayName="Rethrow - SE" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Rethrow_2" />
+                  </Sequence>
+                </If.Then>
+                <If.Else>
+                  <Sequence DisplayName="Return Ex" sap:VirtualizedContainerService.HintSize="400,237" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_3" StrMessage="[exception.Message]" StrTag="error" />
+                    <Assign DisplayName="Failed to send" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_3">
+                      <Assign.To>
+                        <OutArgument x:TypeArguments="x:Boolean">[out_boolFailedToSend]</OutArgument>
+                      </Assign.To>
+                      <Assign.Value>
+                        <InArgument x:TypeArguments="x:Boolean">True</InArgument>
+                      </Assign.Value>
+                    </Assign>
+                  </Sequence>
+                </If.Else>
+              </If>
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+  </Sequence>
+</Activity>
+
+
+
+

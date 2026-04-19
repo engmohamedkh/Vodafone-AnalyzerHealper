@@ -1,0 +1,376 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="HBBWiFiXperts_Function" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:i="clr-namespace:IAP_Logging;assembly=IAP.Logging" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common" xmlns:sn="clr-namespace:System.Net;assembly=System.Net.Primitives" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_boolRethrow" Type="InArgument(x:Boolean)" />
+    <x:Property Name="out_strExceptionMessage" Type="OutArgument(x:String)" />
+    <x:Property Name="out_boolNoRecovery" Type="OutArgument(x:Boolean)" />
+    <x:Property Name="in_dctRoboText" Type="InArgument(scg:Dictionary(x:String, x:String))" />
+    <x:Property Name="in_crddctRoboCred" Type="InArgument(scg:Dictionary(x:String, sn:NetworkCredential))" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap:VirtualizedContainerService.HintSize>1352,794</sap:VirtualizedContainerService.HintSize>
+  <sap2010:WorkflowViewState.IdRef>Main_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>IAP_Logging</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Activities.Validation</x:String>
+      <x:String>System.Activities.XamlIntegration</x:String>
+      <x:String>System.Collections</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Data</x:String>
+      <x:String>System.Diagnostics</x:String>
+      <x:String>System.Drawing</x:String>
+      <x:String>System.Globalization</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net.Mail</x:String>
+      <x:String>System.Reflection</x:String>
+      <x:String>System.Runtime.InteropServices</x:String>
+      <x:String>System.Runtime.Serialization</x:String>
+      <x:String>System.Windows.Markup</x:String>
+      <x:String>System.Xml</x:String>
+      <x:String>System.Xml.Linq</x:String>
+      <x:String>System.Xml.Serialization</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>System.ComponentModel</x:String>
+      <x:String>System.Linq.Expressions</x:String>
+      <x:String>System.Numerics</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>IAP.Logging</AssemblyReference>
+      <AssemblyReference>Microsoft.Bcl.AsyncInterfaces</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic.Core</AssemblyReference>
+      <AssemblyReference>Microsoft.VisualBasic.Forms</AssemblyReference>
+      <AssemblyReference>mscorlib</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>PresentationCore</AssemblyReference>
+      <AssemblyReference>PresentationFramework</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.CodeDom</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Collections.NonGeneric</AssemblyReference>
+      <AssemblyReference>System.ComponentModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.Composition</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.EventBasedAsync</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.Primitives</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>System.Configuration.ConfigurationManager</AssemblyReference>
+      <AssemblyReference>System.Console</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Data</AssemblyReference>
+      <AssemblyReference>System.Data.Common</AssemblyReference>
+      <AssemblyReference>System.Drawing</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Linq.Async</AssemblyReference>
+      <AssemblyReference>System.Linq.Expressions</AssemblyReference>
+      <AssemblyReference>System.Memory</AssemblyReference>
+      <AssemblyReference>System.Memory.Data</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Private.DataContractSerialization</AssemblyReference>
+      <AssemblyReference>System.Private.ServiceModel</AssemblyReference>
+      <AssemblyReference>System.Private.Uri</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization.Formatters</AssemblyReference>
+      <AssemblyReference>System.Runtime.Serialization.Primitives</AssemblyReference>
+      <AssemblyReference>System.Security.Permissions</AssemblyReference>
+      <AssemblyReference>System.ServiceModel</AssemblyReference>
+      <AssemblyReference>System.ValueTuple</AssemblyReference>
+      <AssemblyReference>System.Xaml</AssemblyReference>
+      <AssemblyReference>System.Xml</AssemblyReference>
+      <AssemblyReference>System.Xml.Linq</AssemblyReference>
+      <AssemblyReference>UiPath.Cryptography</AssemblyReference>
+      <AssemblyReference>UiPath.Excel</AssemblyReference>
+      <AssemblyReference>UiPath.Excel.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.Mail</AssemblyReference>
+      <AssemblyReference>UiPath.OCR.Activities.Design</AssemblyReference>
+      <AssemblyReference>UiPath.Studio.Constants</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UIAutomationCore</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>WindowsBase</AssemblyReference>
+      <AssemblyReference>System.Data.SqlClient</AssemblyReference>
+      <AssemblyReference>System.Private.Xml</AssemblyReference>
+      <AssemblyReference>System.Linq.Async.Queryable</AssemblyReference>
+      <AssemblyReference>System.Linq.Parallel</AssemblyReference>
+      <AssemblyReference>System.Collections.Immutable</AssemblyReference>
+      <AssemblyReference>System.Linq.Queryable</AssemblyReference>
+      <AssemblyReference>System.Runtime.Numerics</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <sap:WorkflowViewStateService.ViewState>
+    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+      <x:Boolean x:Key="ShouldExpandAll">False</x:Boolean>
+    </scg:Dictionary>
+  </sap:WorkflowViewStateService.ViewState>
+  <Sequence sap2010:Annotation.AnnotationText="Component Name: HBBWiFiXperts_LogTechnicians&#xA;Description: #NA&#xA;Pre Condition: #NA&#xA;Post Condition: #NA&#xA;PDD Section: #NA" DisplayName="Main" sap:VirtualizedContainerService.HintSize="1211,2848" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="HBBWiFiXperts_LogTechnicians" Name="strComponentName" />
+      <Variable x:TypeArguments="x:Boolean" Name="boolActionSuccess" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+        <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <i:Process_Monitoring___Component___Start DisplayName="Process Monitoring - Component - Start" sap:VirtualizedContainerService.HintSize="574,122" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___Start_1" StrFileName="[strComponentName]" />
+    <TryCatch DisplayName="Try Catch" sap:VirtualizedContainerService.HintSize="574,2631" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+      <TryCatch.Try>
+        <Sequence DisplayName="Work Sequence" sap:VirtualizedContainerService.HintSize="536,2380" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Sequence.Variables>
+            <Variable x:TypeArguments="scg:IEnumerable(ui:QueueItem)" Name="lstqiTechnicians" />
+            <Variable x:TypeArguments="sd:DataTable" Name="dtTechnicians" />
+            <Variable x:TypeArguments="scg:Dictionary(x:String, x:String)" Name="jsonItemData" />
+            <Variable x:TypeArguments="x:Int32" Name="intIndex" />
+            <Variable x:TypeArguments="x:String" Name="strExceptionMessage" />
+            <Variable x:TypeArguments="x:Boolean" Name="boolNoRecovery" />
+            <Variable x:TypeArguments="x:Int32" Name="intAvailOpen" />
+            <Variable x:TypeArguments="x:Int32" Name="intAvaiReleased" />
+          </Sequence.Variables>
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <Assign sap:VirtualizedContainerService.HintSize="502,114" sap2010:WorkflowViewState.IdRef="Assign_9">
+            <Assign.To>
+              <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:String)">[jsonItemData]</OutArgument>
+            </Assign.To>
+            <Assign.Value>
+              <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)">[New Dictionary(Of String, String)]</InArgument>
+            </Assign.Value>
+          </Assign>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Orch_GetQueueItems - Invoke Workflow File (Logic\Orch_GetQueueItems.xaml)" sap:VirtualizedContainerService.HintSize="502,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Logic\Orch_GetTechnicianItems.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:Boolean" x:Key="in_boolRethrow">True</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strQueueName">[in_dctRoboText("TechniciansQueueName")]</InArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_strExceptionMessage">[strExceptionMessage]</OutArgument>
+              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_boolNoRecovery">[boolNoRecovery]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strOrchFolderPath">[in_dctRoboText("OrchFolder")]</InArgument>
+              <OutArgument x:TypeArguments="scg:IEnumerable(ui:QueueItem)" x:Key="out_lstqiQueueItems">[lstqiTechnicians]</OutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_strPrefix">[Now.ToString("ddMMyyyy")]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <ui:ForEach x:TypeArguments="ui:QueueItem" CurrentIndex="{x:Null}" DisplayName="For Each qi" sap:VirtualizedContainerService.HintSize="502,488" sap2010:WorkflowViewState.IdRef="ForEach`1_1" Values="[lstqiTechnicians]">
+            <ui:ForEach.Body>
+              <ActivityAction x:TypeArguments="ui:QueueItem">
+                <ActivityAction.Argument>
+                  <DelegateInArgument x:TypeArguments="ui:QueueItem" Name="qi" />
+                </ActivityAction.Argument>
+                <Sequence DisplayName="Body" sap:VirtualizedContainerService.HintSize="468,342" sap2010:WorkflowViewState.IdRef="Sequence_9">
+                  <Sequence.Variables>
+                    <Variable x:TypeArguments="x:String" Name="strDecryptedItemData" />
+                  </Sequence.Variables>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                  <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="IAP_DecryptText - Invoke Workflow File (Logic\IAP_DecryptText.xaml)" sap:VirtualizedContainerService.HintSize="434,177" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Logic\IAP_DecryptText.xaml">
+                    <ui:InvokeWorkflowFile.Arguments>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strTextToDecrypt">[qi.SpecificContent("Item Data").ToString]</InArgument>
+                      <OutArgument x:TypeArguments="x:String" x:Key="out_strDecryptedValue">[strDecryptedItemData]</OutArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strEncryptionKey">[in_crddctRoboCred("PayloadEncryption").Password]</InArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_strContextInfo" />
+                    </ui:InvokeWorkflowFile.Arguments>
+                  </ui:InvokeWorkflowFile>
+                  <Assign sap:VirtualizedContainerService.HintSize="434,105" sap2010:WorkflowViewState.IdRef="Assign_10">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="x:String">[jsonItemData(qi.Reference.ToString)]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="x:String">[strDecryptedItemData]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                </Sequence>
+              </ActivityAction>
+            </ui:ForEach.Body>
+          </ui:ForEach>
+          <ui:InvokeCode ContinueOnError="{x:Null}" Code="dtResult = New DataTable()&#xD;&#xA;dtResult.Columns.Add(&quot;remedy_username&quot;, GetType(String))&#xD;&#xA;dtResult.Columns.Add(&quot;available_open_slots&quot;, GetType(Integer))&#xD;&#xA;dtResult.Columns.Add(&quot;assigned_open_slots&quot;, GetType(Integer))&#xD;&#xA;dtResult.Columns.Add(&quot;available_released_slots&quot;, GetType(Integer))&#xD;&#xA;dtResult.Columns.Add(&quot;assigned_released_slots&quot;, GetType(Integer))&#xD;&#xA;dtResult.Columns.Add(&quot;total_slots&quot;, GetType(Integer))&#xD;&#xA;&#xD;&#xA;Dim openAvail As New Dictionary(Of String, Integer)()&#xD;&#xA;Dim openAssigned As New Dictionary(Of String, Integer)()&#xD;&#xA;Dim releasedAvail As New Dictionary(Of String, Integer)()&#xD;&#xA;Dim releasedAssigned As New Dictionary(Of String, Integer)()&#xD;&#xA;&#xD;&#xA;Dim totalAvailOpen As Integer = 0&#xD;&#xA;Dim totalAvailReleased As Integer = 0&#xD;&#xA;&#xD;&#xA;For Each qi As UiPath.Core.QueueItem In lstqiTechnicians&#xD;&#xA;    Dim reference As String = &quot;&quot;&#xD;&#xA;    If qi.Reference IsNot Nothing Then reference = qi.Reference&#xD;&#xA;&#xD;&#xA;    Dim status As String = &quot;new&quot;&#xD;&#xA;    Try&#xD;&#xA;        status = qi.Status.ToString().ToLower()&#xD;&#xA;    Catch&#xD;&#xA;    End Try&#xD;&#xA;&#xD;&#xA;    Dim jsonStr As String = &quot;&quot;&#xD;&#xA;    If jsonItemData.ContainsKey(reference) Then&#xD;&#xA;        jsonStr = jsonItemData(reference)&#xD;&#xA;    End If&#xD;&#xA;&#xD;&#xA;    Dim username As String = &quot;&quot;&#xD;&#xA;    If Len(jsonStr) &gt; 0 Then&#xD;&#xA;        Try&#xD;&#xA;            Dim jObj As Newtonsoft.Json.Linq.JObject = Newtonsoft.Json.Linq.JObject.Parse(jsonStr)&#xD;&#xA;            Dim userToken As Object = jObj(&quot;remedy_username&quot;)&#xD;&#xA;            If userToken IsNot Nothing Then&#xD;&#xA;                username = userToken.ToString()&#xD;&#xA;            End If&#xD;&#xA;        Catch&#xD;&#xA;        End Try&#xD;&#xA;    End If&#xD;&#xA;&#xD;&#xA;    If Len(username) = 0 Then Continue For&#xD;&#xA;&#xD;&#xA;    Dim refLower As String = reference.ToLower()&#xD;&#xA;&#xD;&#xA;    ' OPEN slots&#xD;&#xA;    If InStr(refLower, &quot;open&quot;) &gt; 0 Then&#xD;&#xA;        If status = &quot;new&quot; Or status = &quot;inprogress&quot; Then&#xD;&#xA;            totalAvailOpen += 1&#xD;&#xA;            If openAvail.ContainsKey(username) Then&#xD;&#xA;                openAvail(username) = openAvail(username) + 1&#xD;&#xA;            Else&#xD;&#xA;                openAvail(username) = 1&#xD;&#xA;            End If&#xD;&#xA;        ElseIf status = &quot;successful&quot; Then&#xD;&#xA;            If openAssigned.ContainsKey(username) Then&#xD;&#xA;                openAssigned(username) = openAssigned(username) + 1&#xD;&#xA;            Else&#xD;&#xA;                openAssigned(username) = 1&#xD;&#xA;            End If&#xD;&#xA;        End If&#xD;&#xA;    End If&#xD;&#xA;&#xD;&#xA;    ' RELEASED slots&#xD;&#xA;    If InStr(refLower, &quot;released&quot;) &gt; 0 Then&#xD;&#xA;        If status = &quot;new&quot; Or status = &quot;inprogress&quot; Then&#xD;&#xA;            totalAvailReleased += 1&#xD;&#xA;            If releasedAvail.ContainsKey(username) Then&#xD;&#xA;                releasedAvail(username) = releasedAvail(username) + 1&#xD;&#xA;            Else&#xD;&#xA;                releasedAvail(username) = 1&#xD;&#xA;            End If&#xD;&#xA;        ElseIf status = &quot;successful&quot; Then&#xD;&#xA;            If releasedAssigned.ContainsKey(username) Then&#xD;&#xA;                releasedAssigned(username) = releasedAssigned(username) + 1&#xD;&#xA;            Else&#xD;&#xA;                releasedAssigned(username) = 1&#xD;&#xA;            End If&#xD;&#xA;        End If&#xD;&#xA;    End If&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;' Get unique users&#xD;&#xA;Dim allUsers As New List(Of String)()&#xD;&#xA;Dim tempDict As New Dictionary(Of String, Boolean)()&#xD;&#xA;&#xD;&#xA;Dim keys() As String&#xD;&#xA;keys = openAvail.Keys.ToArray()&#xD;&#xA;For Each k As String In keys&#xD;&#xA;    If Not tempDict.ContainsKey(k) Then&#xD;&#xA;        tempDict(k) = True&#xD;&#xA;        allUsers.Add(k)&#xD;&#xA;    End If&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;keys = openAssigned.Keys.ToArray()&#xD;&#xA;For Each k As String In keys&#xD;&#xA;    If Not tempDict.ContainsKey(k) Then&#xD;&#xA;        tempDict(k) = True&#xD;&#xA;        allUsers.Add(k)&#xD;&#xA;    End If&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;keys = releasedAvail.Keys.ToArray()&#xD;&#xA;For Each k As String In keys&#xD;&#xA;    If Not tempDict.ContainsKey(k) Then&#xD;&#xA;        tempDict(k) = True&#xD;&#xA;        allUsers.Add(k)&#xD;&#xA;    End If&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;keys = releasedAssigned.Keys.ToArray()&#xD;&#xA;For Each k As String In keys&#xD;&#xA;    If Not tempDict.ContainsKey(k) Then&#xD;&#xA;        tempDict(k) = True&#xD;&#xA;        allUsers.Add(k)&#xD;&#xA;    End If&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;' Fill table&#xD;&#xA;For Each user As String In allUsers&#xD;&#xA;    Dim row As DataRow = dtResult.NewRow()&#xD;&#xA;&#xD;&#xA;    Dim availOpen As Integer = If(openAvail.ContainsKey(user), openAvail(user), 0)&#xD;&#xA;    Dim assignedOpen As Integer = If(openAssigned.ContainsKey(user), openAssigned(user), 0)&#xD;&#xA;    Dim availReleased As Integer = If(releasedAvail.ContainsKey(user), releasedAvail(user), 0)&#xD;&#xA;    Dim assignedReleased As Integer = If(releasedAssigned.ContainsKey(user), releasedAssigned(user), 0)&#xD;&#xA;&#xD;&#xA;    row(&quot;remedy_username&quot;) = user&#xD;&#xA;    row(&quot;available_open_slots&quot;) = availOpen&#xD;&#xA;    row(&quot;assigned_open_slots&quot;) = assignedOpen&#xD;&#xA;    row(&quot;available_released_slots&quot;) = availReleased&#xD;&#xA;    row(&quot;assigned_released_slots&quot;) = assignedReleased&#xD;&#xA;    row(&quot;total_slots&quot;) = availOpen + assignedOpen + availReleased + assignedReleased&#xD;&#xA;    dtResult.Rows.Add(row)&#xD;&#xA;Next&#xD;&#xA;&#xD;&#xA;out_totalAvailOpen = totalAvailOpen&#xD;&#xA;out_totalAvailReleased = totalAvailReleased" DisplayName="Invoke Code" sap:VirtualizedContainerService.HintSize="502,197" sap2010:WorkflowViewState.IdRef="InvokeCode_1">
+            <ui:InvokeCode.Arguments>
+              <InArgument x:TypeArguments="scg:IEnumerable(ui:QueueItem)" x:Key="lstqiTechnicians">
+                <VisualBasicValue x:TypeArguments="scg:IEnumerable(ui:QueueItem)" ExpressionText="lstqiTechnicians" />
+              </InArgument>
+              <OutArgument x:TypeArguments="sd:DataTable" x:Key="dtResult ">
+                <VisualBasicReference x:TypeArguments="sd:DataTable" ExpressionText="dtTechnicians" />
+              </OutArgument>
+              <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)" x:Key="jsonItemData">
+                <VisualBasicValue x:TypeArguments="scg:Dictionary(x:String, x:String)" ExpressionText="jsonItemData" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Int32" x:Key="out_totalAvailOpen ">
+                <VisualBasicReference x:TypeArguments="x:Int32" ExpressionText="intAvailOpen" />
+              </OutArgument>
+              <OutArgument x:TypeArguments="x:Int32" x:Key="out_totalAvailReleased ">
+                <VisualBasicReference x:TypeArguments="x:Int32" ExpressionText="intAvaiReleased" />
+              </OutArgument>
+            </ui:InvokeCode.Arguments>
+          </ui:InvokeCode>
+          <ui:AddLogFields DisplayName="Add Log Fields" sap:VirtualizedContainerService.HintSize="502,122" sap2010:WorkflowViewState.IdRef="AddLogFields_2">
+            <ui:AddLogFields.Fields>
+              <InArgument x:TypeArguments="x:String" x:Key="textGField14">[intAvailOpen.ToString]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="textGField15">[intAvaiReleased.ToString]</InArgument>
+            </ui:AddLogFields.Fields>
+          </ui:AddLogFields>
+          <i:Analytics_Log DisplayName="Analytics Log" sap:VirtualizedContainerService.HintSize="502,173" sap2010:WorkflowViewState.IdRef="Analytics_Log_2" StrArchetype="QCount" StrMessage="Slots" />
+          <Assign sap:VirtualizedContainerService.HintSize="502,114" sap2010:WorkflowViewState.IdRef="Assign_11">
+            <Assign.To>
+              <OutArgument x:TypeArguments="x:Int32">[intIndex]</OutArgument>
+            </Assign.To>
+            <Assign.Value>
+              <InArgument x:TypeArguments="x:Int32">0</InArgument>
+            </Assign.Value>
+          </Assign>
+          <ui:InterruptibleWhile CurrentIndex="{x:Null}" Condition="[intIndex&lt; dtTechnicians.RowCount]" DisplayName="While" sap:VirtualizedContainerService.HintSize="502,606" sap2010:WorkflowViewState.IdRef="InterruptibleWhile_1">
+            <ui:InterruptibleWhile.Body>
+              <Sequence DisplayName="Body" sap:VirtualizedContainerService.HintSize="468,460" sap2010:WorkflowViewState.IdRef="Sequence_10">
+                <sap:WorkflowViewStateService.ViewState>
+                  <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                    <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                  </scg:Dictionary>
+                </sap:WorkflowViewStateService.ViewState>
+                <ui:AddLogFields DisplayName="Add Log Fields" sap:VirtualizedContainerService.HintSize="434,122" sap2010:WorkflowViewState.IdRef="AddLogFields_1">
+                  <ui:AddLogFields.Fields>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField6">[dtTechnicians(intIndex)("available_open_slots").ToString()]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField7">[dtTechnicians(intIndex)("assigned_open_slots").ToString()]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField8">[dtTechnicians(intIndex)("available_released_slots").ToString()]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField9">[dtTechnicians(intIndex)("assigned_released_slots").ToString()]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField18">[dtTechnicians(intIndex)("remedy_username").ToString()]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="textGField10">[dtTechnicians(intIndex)("total_slots").ToString()]</InArgument>
+                  </ui:AddLogFields.Fields>
+                </ui:AddLogFields>
+                <i:Analytics_Log DisplayName="Analytics Log" sap:VirtualizedContainerService.HintSize="434,173" sap2010:WorkflowViewState.IdRef="Analytics_Log_1" StrArchetype="Tech" StrMessage="Slots" />
+                <Assign sap:VirtualizedContainerService.HintSize="434,105" sap2010:WorkflowViewState.IdRef="Assign_12">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:Int32">[intIndex]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:Int32">[intIndex+1]</InArgument>
+                  </Assign.Value>
+                </Assign>
+              </Sequence>
+            </ui:InterruptibleWhile.Body>
+          </ui:InterruptibleWhile>
+          <Assign DisplayName="Status success" sap:VirtualizedContainerService.HintSize="502,114" sap2010:WorkflowViewState.IdRef="Assign_4">
+            <Assign.To>
+              <OutArgument x:TypeArguments="x:Boolean">[boolActionSuccess]</OutArgument>
+            </Assign.To>
+            <Assign.Value>
+              <InArgument x:TypeArguments="x:Boolean">[True]</InArgument>
+            </Assign.Value>
+          </Assign>
+          <i:Process_Monitoring___Component___End StrExecutionMessage="{x:Null}" BoolSuccess="True" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="502,215" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_1" StrFileName="[strComponentName]" />
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="s:Exception" sap:VirtualizedContainerService.HintSize="540,22" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+              <x:Boolean x:Key="IsPinned">False</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Exception Sequence" sap:VirtualizedContainerService.HintSize="416,55" sap2010:WorkflowViewState.IdRef="Sequence_5">
+              <sap:WorkflowViewStateService.ViewState>
+                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                  <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                  <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                </scg:Dictionary>
+              </sap:WorkflowViewStateService.ViewState>
+              <i:Process_Monitoring___Component___End BoolSuccess="False" DisplayName="Process Monitoring - Component - End" sap:VirtualizedContainerService.HintSize="845,25" sap2010:WorkflowViewState.IdRef="Process_Monitoring___Component___End_3" StrExecutionMessage="[exception.Message]" StrFileName="[strComponentName]" />
+              <Sequence sap2010:Annotation.AnnotationText="A logic component fail is virtually guaranteed to repeat perpetually, as case data is not expected to change in between reattempts" DisplayName="No Recovery Sequence" sap:VirtualizedContainerService.HintSize="845,81" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                <sap:WorkflowViewStateService.ViewState>
+                  <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                    <x:Boolean x:Key="IsExpanded">False</x:Boolean>
+                    <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                  </scg:Dictionary>
+                </sap:WorkflowViewStateService.ViewState>
+                <Assign sap2010:Annotation.AnnotationText="Applies when no rethrow is done, the value passes out to the calling point" DisplayName="No recovery (via argument)" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_6">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:Boolean">[out_boolNoRecovery]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:Boolean">[True]</InArgument>
+                  </Assign.Value>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                </Assign>
+                <Assign sap2010:Annotation.AnnotationText="Applies when a rethrow is done, as rethrows ignore all Out arguments, even if values have previously been assigned to them" DisplayName="No recovery (via exception)" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_7">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:Object">[exception.Data("NoRecovery")]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:Object">[True]</InArgument>
+                  </Assign.Value>
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsAnnotationDocked">False</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                </Assign>
+              </Sequence>
+              <If Condition="[in_boolRethrow]" DisplayName="Rethrow?" sap:VirtualizedContainerService.HintSize="845,396" sap2010:WorkflowViewState.IdRef="If_4">
+                <If.Then>
+                  <Sequence DisplayName="Rethrow Ex" sap:VirtualizedContainerService.HintSize="400,201" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_1" StrMessage="[exception.Message]" StrTag="error" />
+                    <Rethrow sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Rethrow_3" />
+                  </Sequence>
+                </If.Then>
+                <If.Else>
+                  <Sequence DisplayName="Return Ex" sap:VirtualizedContainerService.HintSize="400,237" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                    <sap:WorkflowViewStateService.ViewState>
+                      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                      </scg:Dictionary>
+                    </sap:WorkflowViewStateService.ViewState>
+                    <i:Error_Log DisplayName="Error Log" sap:VirtualizedContainerService.HintSize="338,25" sap2010:WorkflowViewState.IdRef="Error_Log_2" StrMessage="[exception.Message]" StrTag="error" />
+                    <Assign DisplayName="Exception message" sap:VirtualizedContainerService.HintSize="338,61" sap2010:WorkflowViewState.IdRef="Assign_8">
+                      <Assign.To>
+                        <OutArgument x:TypeArguments="x:String">[out_strExceptionMessage]</OutArgument>
+                      </Assign.To>
+                      <Assign.Value>
+                        <InArgument x:TypeArguments="x:String">[exception.Message]</InArgument>
+                      </Assign.Value>
+                    </Assign>
+                  </Sequence>
+                </If.Else>
+              </If>
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+  </Sequence>
+</Activity>

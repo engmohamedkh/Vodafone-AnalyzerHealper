@@ -25,6 +25,11 @@ namespace AnalyzerHelper.View
             int fileCount = rows.Select(r => r.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
             HeaderText.Text = $"{rows.Count} file(s) to annotate. Fields are auto-populated — edit as needed.";
 
+            foreach (var row in _rows)
+            {
+                row.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(AnnotationRow.IsSelectedForFix)) UpdateBottomStatus(); };
+            }
+
             Grid.ItemsSource = _rows;
             UpdateBottomStatus();
         }
@@ -36,13 +41,37 @@ namespace AnalyzerHelper.View
             UpdateBottomStatus();
         }
 
+        private void SelectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var row in _rows) row.IsSelectedForFix = true;
+            Grid.Items.Refresh();
+            UpdateBottomStatus();
+        }
+
+        private void UnselectAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var row in _rows) row.IsSelectedForFix = false;
+            Grid.Items.Refresh();
+            UpdateBottomStatus();
+        }
+
         private void UpdateBottomStatus()
         {
-            int selected = Grid.SelectedItems.Count;
+            int checkedCount = _rows.Count(r => r.IsSelectedForFix);
             int total = _rows.Count;
-            BottomStatusText.Text = selected == 0
-                ? $"All {total} file(s) will be annotated. Click a row to review."
-                : $"{selected} of {total} selected.";
+            
+            CheckedCountText.Text = $"{checkedCount} of {total} checked";
+            
+            if (ApplyButton != null)
+            {
+                ApplyButton.IsEnabled = checkedCount > 0;
+                ApplyButton.Content = checkedCount == total ? "✔ Apply All" : "✔ Apply Selected";
+            }
+            
+            int selectedRows = Grid.SelectedItems.Count;
+            BottomStatusText.Text = selectedRows == 0
+                ? $"Click a row to edit. Checked items will be processed."
+                : $"{selectedRows} row(s) highlighted.";
         }
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)

@@ -19,7 +19,7 @@ namespace AnalyzerHelper.Rules
 	/// </summary>
 	public sealed class AnnotationRule : IBatchAnalyzerRuleWithFix
 	{
-		public string RuleId => "VF-016";
+		public string RuleId => "VF-017";
 		public string RuleName => "Annotation";
 		public string DefaultRecommendation =>
 			"Workflow annotation must contain all sections: Component Name, Description, Pre Condition, Post Condition, PDD Section. Use Fix to edit via the annotation dialog.";
@@ -138,8 +138,7 @@ namespace AnalyzerHelper.Rules
 				{
 					var parsed = ParseAnnotation(annotAttr.Value);
 					string v;
-					v = GetSectionValue(parsed, "Component Name").Trim();
-					if (!string.IsNullOrEmpty(v)) componentName = v;
+                                        // Component Name is ALWAYS filename as per user request
 					v = GetSectionValue(parsed, "Description").Trim();
 					if (!string.IsNullOrEmpty(v)) description = v;
 					v = GetSectionValue(parsed, "Pre Condition").Trim();
@@ -186,7 +185,7 @@ namespace AnalyzerHelper.Rules
 			if (dialog.ShowDialog() != true || !dialog.Applied)
 			{
 				_batchCancelled = true;
-				return;
+				throw new OperationCanceledException($"User cancelled the {RuleName} batch fix dialog.");
 			}
 
 			_batchPrepared = true;
@@ -218,12 +217,8 @@ namespace AnalyzerHelper.Rules
 			}
 			else
 			{
-				// Fallback single-file mode (shouldn't happen in batch)
 				return false;
 			}
-
-			var annotAttr = root.Attributes().FirstOrDefault(a =>
-				string.Equals(a.Name.LocalName, "Annotation.AnnotationText", StringComparison.Ordinal));
 
 			string newAnnotationText = BuildAnnotationText(
 				row.ComponentName?.Trim() ?? Path.GetFileNameWithoutExtension(filePath),
@@ -232,34 +227,54 @@ namespace AnalyzerHelper.Rules
 				row.PostCondition?.Trim() ?? "#NA",
 				row.PddSection?.Trim() ?? "#NA");
 
-			XName annotName = Sap2010 + "Annotation.AnnotationText";
+			// Try to find existing attribute by local name (ignoring namespace URI if it differs slightly)
+			var annotAttr = root.Attributes().FirstOrDefault(a =>
+				string.Equals(a.Name.LocalName, "Annotation.AnnotationText", StringComparison.Ordinal));
+
 			if (annotAttr != null)
+			{
+				if (annotAttr.Value == newAnnotationText) return false;
 				annotAttr.Value = newAnnotationText;
+			}
 			else
+			{
+				// Add new one with the standard namespace
+				XName annotName = Sap2010 + "Annotation.AnnotationText";
 				root.Add(new XAttribute(annotName, newAnnotationText));
+			}
 
 			try
 			{
 				bool crlf = content.Contains("\r\n");
 				var sb = new StringBuilder();
+				
+				// Using XmlWriter with specific settings to maintain consistency
 				var settings = new XmlWriterSettings
 				{
 					OmitXmlDeclaration = true,
 					Indent = true,
 					IndentChars = "  ",
 					NewLineChars = crlf ? "\r\n" : "\n",
-					NewLineHandling = NewLineHandling.Replace,
+					NewLineHandling = NewLineHandling.Entitize, // Ensure newlines in attributes are written as &#xA;
 				};
+				
 				using (var sw = new StringWriter(sb))
 				using (var xw = XmlWriter.Create(sw, settings))
+				{
 					doc.Save(xw);
+				}
 
 				newContent = sb.ToString();
+				
+				// Restore XML declaration if present
 				if (content.TrimStart().StartsWith("<?xml"))
 				{
 					int end = content.IndexOf("?>", StringComparison.Ordinal) + 2;
 					if (end >= 2)
-						newContent = content.Substring(0, end) + (crlf ? "\r\n" : "\n") + newContent;
+					{
+						string decl = content.Substring(0, end);
+						newContent = decl + (crlf ? "\r\n" : "\n") + newContent;
+					}
 				}
 				return true;
 			}
@@ -282,18 +297,47 @@ namespace AnalyzerHelper.Rules
 			if (seq == null) return "";
 
 			// Find If.Then inside it
-			var ifThen = seq.Descendants()
-				.Where(e => e.Name.LocalName == "If")
-				.SelectMany(ifEl => ifEl.Elements().Where(c => c.Name.LocalName == "If.Then"))
-				.FirstOrDefault();
-			if (ifThen == null) return "";
+			var ifThen = seq.Elements().FirstOrDefault(e => e.Name.LocalName == "If")?
+                                .Elements().FirstOrDefault(e => e.Name.LocalName == "If.Then");
+                        
+                        if (ifThen == null)
+                        {
+                            // Fallback for nested search
+                            ifThen = seq.Descendants()
+                                .Where(e => e.Name.LocalName == "If")
+                                .SelectMany(ifEl => ifEl.Elements().Where(c => c.Name.LocalName == "If.Then"))
+                                .FirstOrDefault();
+                        }
 
-			// Find Info_Log StrMessage in the Then branch
-			var infoLog = ifThen.Descendants()
-				.FirstOrDefault(e => e.Name.LocalName == "Info_Log");
-			if (infoLog == null) return "";
+			if (ifThen == null) return "#NA";
 
-			return (string?)infoLog.Attribute("StrMessage") ?? "";
+			// Find Log activity in the Then branch
+			var logNode = ifThen.Descendants()
+				.FirstOrDefault(e => e.Name.LocalName.EndsWith("Log", StringComparison.OrdinalIgnoreCase) || 
+                                     e.Name.LocalName == "LogMessage");
+			if (logNode == null) return "#NA";
+
+			string msg = (string?)logNode.Attribute("StrMessage") ?? (string?)logNode.Attribute("Message") ?? "";
+
+            // Check if passed as child argument
+            if (string.IsNullOrWhiteSpace(msg))
+            {
+                var argNode = logNode.Descendants().FirstOrDefault(e => e.Name.LocalName == "InArgument" && 
+                    ((string?)e.Attribute("x:Key") == "StrMessage" || (string?)e.Attribute("x:Key") == "Message"));
+                if (argNode != null)
+                {
+                    msg = argNode.Value;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(msg))
+                return "#NA";
+
+            string testMsg = msg.Trim().ToLowerInvariant();
+            if (testMsg == "null" || testMsg == "{x:null}" || testMsg == "[nothing]")
+                return "#NA";
+
+			return msg;
 		}
 
 		private static XElement FindRootSequenceOrFlowchart(XDocument doc)
@@ -309,25 +353,39 @@ namespace AnalyzerHelper.Rules
 			var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			if (string.IsNullOrWhiteSpace(attrValue)) return result;
 
-			string normalized = attrValue.Replace("&#xD;&#xA;", "\n").Replace("&#xA;", "\n").Replace("\r\n", "\n");
-			string currentKey = null;
+			// Normalize newlines but keep the lines mostly intact for value preservation
+			string normalized = attrValue.Replace("\r\n", "\n").Replace("&#xD;&#xA;", "\n").Replace("&#xA;", "\n");
+			string[] lines = normalized.Split('\n');
+			
+			string? currentKey = null;
 
-			foreach (var line in normalized.Split('\n'))
+			foreach (var line in lines)
 			{
 				string trimmed = line.Trim();
-				if (string.IsNullOrEmpty(trimmed)) continue;
+				if (string.IsNullOrEmpty(trimmed) && currentKey == null) continue;
 
-				string matchedKey = SectionKeys.FirstOrDefault(k =>
-					trimmed.StartsWith(k.Split(' ')[0], StringComparison.OrdinalIgnoreCase) && trimmed.Contains(":"));
+				// Check if this line starts a new section
+				string? matchedKey = SectionKeys.FirstOrDefault(k =>
+					trimmed.StartsWith(k + ":", StringComparison.OrdinalIgnoreCase) || 
+					(trimmed.StartsWith(k.Split(' ')[0], StringComparison.OrdinalIgnoreCase) && trimmed.Contains(":")));
+
 				if (matchedKey != null)
 				{
-					int idx = trimmed.IndexOf(':');
-					result[matchedKey] = trimmed.Substring(idx + 1).Trim();
 					currentKey = matchedKey;
+					int idx = line.IndexOf(':');
+					string val = line.Substring(idx + 1).Trim();
+					result[currentKey] = val;
 				}
-				else if (currentKey != null && result.ContainsKey(currentKey))
+				else if (currentKey != null)
 				{
-					result[currentKey] += "\n" + trimmed;
+					// Append to current section, preserving indentation if it's a continuation line
+					if (result.TryGetValue(currentKey, out var existing))
+					{
+						if (string.IsNullOrEmpty(existing))
+							result[currentKey] = line.TrimEnd();
+						else
+							result[currentKey] = existing + "\n" + line.TrimEnd();
+					}
 				}
 			}
 
