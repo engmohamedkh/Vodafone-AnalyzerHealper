@@ -19,6 +19,9 @@ namespace AnalyzerHelper.Rules
     ///     first &lt;Sequence&gt; or &lt;Flowchart&gt; onward). The header region
     ///     (&lt;x:Members&gt;, companion &lt;this:ClassName.arg&gt; elements) is
     ///     intentionally excluded so declarations don't count as self-usages.
+    ///     Self-closing &lt;Variable /&gt; nodes under that root are also stripped
+    ///     from the usage string (their Name= would otherwise match as a "use"),
+    ///     while Default= values are still scanned for references to other names.
     ///  2. A name is "used" if it appears:
     ///       a. Inside a [...] VB expression in the body.
     ///       b. As an XML attribute NAME bound to a value (output bindings like
@@ -27,7 +30,9 @@ namespace AnalyzerHelper.Rules
     ///     value in the body, it is NEVER removed.
     ///     (Only DECLARED names are checked — not every token in the selector.)
     ///  4. Duplicate scope: if the same variable Name is declared in both an
-    ///     outer and inner scope, the INNER declaration is removed.
+    ///     outer and inner scope, the INNER declaration is removed. Unused-variable
+    ///     reporting ignores only those inner elements — not every declaration
+    ///     with that name (same idea as per-argument removal).
     ///  5. When an argument is removed, its companion &lt;this:ClassName.argName&gt;
     ///     default-value element is also removed.
     /// </summary>
@@ -36,10 +41,9 @@ namespace AnalyzerHelper.Rules
         public string RuleId => "VF-019";
         public string RuleName => "RemoveUnusedVarArg";
         public string DefaultRecommendation =>
-            "Remove Variables and Arguments that are never referenced in " +
-            "expressions or selector attributes. " +
-            "If the same variable name exists in both an outer and inner scope, " +
-            "the inner (shadowing) declaration is removed. " +
+            "Variables and arguments use the same usage rules (body expressions, " +
+            "selector values, attribute names, element text). Remove unused ones; " +
+            "for duplicate variable names, remove inner shadowing declarations only. " +
             "Names referenced inside Selector attributes are always kept.";
         public bool RequiresUserInteraction => false;
 
@@ -58,6 +62,14 @@ namespace AnalyzerHelper.Rules
             new Regex(@"\bSelector=""([^""]*?)""",
                 RegexOptions.Compiled | RegexOptions.Singleline);
 
+        // Self-closing Variable under the workflow root lives inside ExtractBody text;
+        // remove for usage scan so Name="x" is not treated as a reference to x.
+        private static readonly Regex _variableSelfClosing =
+            new Regex(@"<Variable\b[\s\S]*?/>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex _variableDefaultAttr =
+            new Regex(@"\bDefault\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         // =====================================================================
         //  Check  (report only — no mutation)
         // =====================================================================
@@ -71,7 +83,7 @@ namespace AnalyzerHelper.Rules
             try { doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace); }
             catch { return results; }
 
-            string bodyXml = ExtractBody(content);
+            string bodyForUsage = BuildBodyXmlForUsageScan(ExtractBody(content));
 
             var allVars = CollectVariables(doc);
             var allArgs = CollectArguments(doc);
@@ -80,21 +92,27 @@ namespace AnalyzerHelper.Rules
                 allVars.Select(v => v.VarName).Concat(allArgs.Select(a => a.ArgName)),
                 StringComparer.Ordinal);
 
-            var usedNames = FindUsedNames(bodyXml, allDeclaredNames);
+            var usedNames = FindUsedNames(bodyForUsage, allDeclaredNames);
 
-            // Detect inner-scope duplicate variables
-            var duplicateInnerVars = new List<string>();
+            // Inner-scope duplicate variables (shadowing): remove inner declarations only.
+            // Exclude inner duplicate *elements* from the unused list — not the name globally,
+            // or an unused outer with the same name would never be reported (arguments have no duplicate case).
+            var innerDuplicateVarElements = new HashSet<XElement>();
+            var duplicateInnerVarNames = new List<string>();
             foreach (var grp in allVars.GroupBy(v => v.VarName))
             {
                 var ordered = grp.OrderBy(v => v.Depth).ToList();
-                if (ordered.Count > 1)
-                    foreach (var inner in ordered.Skip(1))
-                        duplicateInnerVars.Add(inner.VarName);
+                if (ordered.Count <= 1) continue;
+                foreach (var inner in ordered.Skip(1))
+                {
+                    innerDuplicateVarElements.Add(inner.Element);
+                    duplicateInnerVarNames.Add(inner.VarName);
+                }
             }
 
-            // Genuinely unused variables
+            // Genuinely unused variables (same usage rules as arguments; per declaration, not per name).
             var unusedVarNames = allVars
-                .Where(v => !usedNames.Contains(v.VarName) && !duplicateInnerVars.Contains(v.VarName))
+                .Where(v => !usedNames.Contains(v.VarName) && !innerDuplicateVarElements.Contains(v.Element))
                 .Select(v => v.VarName)
                 .Distinct()
                 .ToList();
@@ -106,15 +124,15 @@ namespace AnalyzerHelper.Rules
                 .Distinct()
                 .ToList();
 
-            if (duplicateInnerVars.Count > 0)
+            if (duplicateInnerVarNames.Count > 0)
             {
                 results.Add(new RuleCheckResult
                 {
                     RuleId = RuleId,
                     RuleName = RuleName,
                     Level = RuleLevel.Warning,
-                    Message = "Duplicate inner-scope variable declarations found: " +
-                              string.Join(", ", duplicateInnerVars.Distinct()) + ".",
+                    Message = "Duplicate inner variables: " +
+                              string.Join(", ", duplicateInnerVarNames.Distinct()) + ".",
                     FilePath = filePath,
                     Recommendation = DefaultRecommendation,
                     RequiresUserInteraction = RequiresUserInteraction
@@ -128,7 +146,7 @@ namespace AnalyzerHelper.Rules
                     RuleId = RuleId,
                     RuleName = RuleName,
                     Level = RuleLevel.Warning,
-                    Message = "Unused variables found: " +
+                    Message = "Unused variables: " +
                               string.Join(", ", unusedVarNames) + ".",
                     FilePath = filePath,
                     Recommendation = DefaultRecommendation,
@@ -143,7 +161,7 @@ namespace AnalyzerHelper.Rules
                     RuleId = RuleId,
                     RuleName = RuleName,
                     Level = RuleLevel.Warning,
-                    Message = "Unused arguments found: " +
+                    Message = "Unused arguments: " +
                               string.Join(", ", unusedArgNames) + ".",
                     FilePath = filePath,
                     Recommendation = DefaultRecommendation,
@@ -168,7 +186,7 @@ namespace AnalyzerHelper.Rules
             catch { return false; }
 
             // ── 1. Split into header and body regions ─────────────────────────
-            string bodyXml = ExtractBody(content);
+            string bodyForUsage = BuildBodyXmlForUsageScan(ExtractBody(content));
 
             // ── 2. Collect all declared names ─────────────────────────────────
             var allVars = CollectVariables(doc);
@@ -179,7 +197,7 @@ namespace AnalyzerHelper.Rules
                 StringComparer.Ordinal);
 
             // ── 3. Find which declared names are actually USED in the body ────
-            var usedNames = FindUsedNames(bodyXml, allDeclaredNames);
+            var usedNames = FindUsedNames(bodyForUsage, allDeclaredNames);
 
             // ── 4. Decide which variables to remove ───────────────────────────
 
@@ -255,6 +273,30 @@ namespace AnalyzerHelper.Rules
             if (a < 0) return b;
             if (b < 0) return a;
             return Math.Min(a, b);
+        }
+
+        /// <summary>
+        /// Removes self-closing &lt;Variable /&gt; markup from the body string so
+        /// <c>Name="unusedVar"</c> is not counted as a usage. Appends <c>Default="..."</c>
+        /// values so expressions that reference other variables still register.
+        /// </summary>
+        private static string BuildBodyXmlForUsageScan(string rawBodyFromExtract)
+        {
+            if (string.IsNullOrEmpty(rawBodyFromExtract))
+                return rawBodyFromExtract;
+
+            var defaultExprs = new StringBuilder();
+            string stripped = _variableSelfClosing.Replace(rawBodyFromExtract, m =>
+            {
+                foreach (Match dm in _variableDefaultAttr.Matches(m.Value))
+                    defaultExprs.Append(' ').Append(dm.Groups[1].Value);
+                return " ";
+            });
+
+            if (defaultExprs.Length > 0)
+                stripped += " " + defaultExprs;
+
+            return stripped;
         }
 
         // =====================================================================

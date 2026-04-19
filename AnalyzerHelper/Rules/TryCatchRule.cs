@@ -1,22 +1,32 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using AnalyzerHelper.Interfaces;
 using AnalyzerHelper.Models;
 
 namespace AnalyzerHelper.Rules
 {
-    /// <summary>Validates that each Catch block contains an info-message log (exception logging) and Rethrow. Auto-fix: adds missing Log and/or Rethrow.</summary>
+    /// <summary>Validates Catch has exception logging and Rethrow. Auto-fix: adds i:Info_Log (IAP) after the handler Sequence opening, Rethrow before the Sequence closes.</summary>
     public sealed class TryCatchRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-012";
         public string RuleName => "TryCatch";
-        public string DefaultRecommendation => "Each Catch must contain an info-message log (e.g. exception.source/exception.message) and a Rethrow activity.";
+        public string DefaultRecommendation => "Add i:Info_Log with exception details in StrMessage and a Rethrow in each Catch handler.";
         public bool RequiresUserInteraction => false;
 
-        private const string LogActivity = @"<ui:Log Message=""[exception.source] [exception.message]"" DisplayName=""Log"" />";
+        /// <summary>Matches studio style for IAP Info_Log; StrMessage logs source and message for the Catch delegate argument.</summary>
+        private const string InfoLogActivity =
+            @"<i:Info_Log StrMessage=""[exception.Source + &quot; &quot; + exception.Message]"" DisplayName=""Info Log"" sap:VirtualizedContainerService.HintSize=""200,25"" sap2010:WorkflowViewState.IdRef=""Info_Log_VF012"" StrTag=""info"" />";
+
         private const string RethrowActivity = @"<Rethrow DisplayName=""Rethrow"" />";
+
+        /// <summary>Do not treat arbitrary attributes (e.g. Process_Monitoring StrExecutionMessage) as the required exception log — only dedicated log activities.</summary>
+        private static readonly Regex CatchHasExplicitExceptionLog = new Regex(
+            @"<ui:Log\b[^>]*\bMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""" +
+            @"|<i:Info_Log\b[^>]*\bStrMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""" +
+            @"|<i:Error_Log\b[^>]*\bStrMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
@@ -27,23 +37,24 @@ namespace AnalyzerHelper.Rules
                 return results;
 
             var catchBlocks = FindCatchBlocks(content);
-            foreach (var (start, bodyStart, bodyEnd, end) in catchBlocks)
+            foreach (var (catchStart, bodyStart, catchCloseTagStart, _) in catchBlocks)
             {
-                string body = content.Substring(bodyStart, bodyEnd - bodyStart);
-                bool hasInfoLog = Regex.IsMatch(body, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+                string body = content.Substring(bodyStart, catchCloseTagStart - bodyStart);
+                bool hasInfoLog = CatchHasExplicitExceptionLog.IsMatch(body);
                 bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
 
                 if (!hasInfoLog || !hasRethrow)
                 {
+                    int line = GetLineNumber(content, catchStart);
                     var missing = new List<string>();
-                    if (!hasInfoLog) missing.Add("info-message log (exception.source/exception.message)");
+                    if (!hasInfoLog) missing.Add("Info log");
                     if (!hasRethrow) missing.Add("Rethrow");
                     results.Add(new RuleCheckResult
                     {
                         RuleId = RuleId,
                         RuleName = RuleName,
                         Level = RuleLevel.Error,
-                        Message = "Catch block must contain info-message log and Rethrow. Missing: " + string.Join(", ", missing) + ".",
+                        Message = $"Line {line}: Missing {string.Join(", ", missing)}.",
                         FilePath = filePath,
                         Recommendation = DefaultRecommendation,
                         RequiresUserInteraction = RequiresUserInteraction
@@ -65,36 +76,46 @@ namespace AnalyzerHelper.Rules
 
             bool changed = false;
             int offset = 0;
-            foreach (var (start, bodyStart, bodyEnd, end) in catchBlocks)
+            foreach (var (_, bodyStart, catchCloseTagStart, _) in catchBlocks)
             {
                 int adjBodyStart = bodyStart + offset;
-                int adjBodyEnd = bodyEnd + offset;
-                int adjEnd = end + offset;
-                string body = newContent.Substring(adjBodyStart, adjBodyEnd - adjBodyStart);
-                bool hasInfoLog = Regex.IsMatch(body, "exception\\.(source|message)", RegexOptions.IgnoreCase);
+                int adjCatchClose = catchCloseTagStart + offset;
+                string body = newContent.Substring(adjBodyStart, adjCatchClose - adjBodyStart);
+                bool hasInfoLog = CatchHasExplicitExceptionLog.IsMatch(body);
                 bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                string toInsertBeforeEnd = "";
-                if (!hasInfoLog) toInsertBeforeEnd += LogActivity;
-                if (!hasRethrow) toInsertBeforeEnd += RethrowActivity;
-                if (toInsertBeforeEnd.Length == 0) continue;
+                if (hasInfoLog && hasRethrow) continue;
 
-                newContent = newContent.Substring(0, adjBodyEnd) + toInsertBeforeEnd + newContent.Substring(adjBodyEnd);
-                offset += toInsertBeforeEnd.Length;
+                if (!TryGetCatchSequenceInsertPoints(newContent, adjBodyStart, adjCatchClose, out int logInsertIndex, out int rethrowInsertIndex))
+                    continue;
+
+                int addedThisCatch = 0;
+                // Insert end (Rethrow) first when both needed so start index stays valid.
+                if (!hasRethrow)
+                {
+                    string indentR = GetIndentationBefore(newContent, rethrowInsertIndex);
+                    string rethrowPart = Environment.NewLine + indentR + RethrowActivity;
+                    newContent = newContent.Substring(0, rethrowInsertIndex) + rethrowPart + newContent.Substring(rethrowInsertIndex);
+                    addedThisCatch += rethrowPart.Length;
+                }
+
+                if (!hasInfoLog)
+                {
+                    string indentL = GetIndentationBefore(newContent, logInsertIndex);
+                    string logPart = Environment.NewLine + indentL + InfoLogActivity;
+                    newContent = newContent.Substring(0, logInsertIndex) + logPart + newContent.Substring(logInsertIndex);
+                    addedThisCatch += logPart.Length;
+                }
+
+                offset += addedThisCatch;
                 changed = true;
             }
 
-            if (changed && newContent.IndexOf("xmlns:ui=", StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                int actIdx = newContent.IndexOf("<Activity ", StringComparison.OrdinalIgnoreCase);
-                if (actIdx >= 0)
-                    newContent = newContent.Substring(0, actIdx) + "<Activity xmlns:ui=\"http://schemas.uipath.com/workflow/activities\" " + newContent.Substring(actIdx + "<Activity ".Length);
-            }
             return changed;
         }
 
-        /// <summary>Returns (catchStart, bodyStart, bodyEnd, catchEnd) for each Catch block.</summary>
-        private static List<(int catchStart, int bodyStart, int bodyEnd, int catchEnd)> FindCatchBlocks(string content)
+        /// <summary>Returns (catchStart, bodyStart, catchCloseTagStart, indexAfterCatchTag) for each Catch block.</summary>
+        private static List<(int catchStart, int bodyStart, int catchCloseTagStart, int afterCatchEnd)> FindCatchBlocks(string content)
         {
             var list = new List<(int, int, int, int)>();
             int i = 0;
@@ -119,6 +140,111 @@ namespace AnalyzerHelper.Rules
                 i = catchClose + 1;
             }
             return list;
+        }
+
+        /// <summary>logInsertIndex = split index after ViewState (or after &lt;Sequence&gt; open); rethrowInsertIndex = start of closing &lt;/Sequence&gt;.</summary>
+        private static bool TryGetCatchSequenceInsertPoints(string content, int bodyStart, int catchCloseTagStart, out int logInsertIndex, out int rethrowInsertIndex)
+        {
+            logInsertIndex = -1;
+            rethrowInsertIndex = -1;
+            if (catchCloseTagStart > content.Length || bodyStart >= catchCloseTagStart)
+                return false;
+
+            int aaOpen = content.IndexOf("<ActivityAction", bodyStart, StringComparison.OrdinalIgnoreCase);
+            if (aaOpen < 0 || aaOpen >= catchCloseTagStart)
+                return false;
+
+            int aaClose = content.LastIndexOf("</ActivityAction>", catchCloseTagStart, StringComparison.OrdinalIgnoreCase);
+            if (aaClose < aaOpen)
+                return false;
+
+            int argClose = content.IndexOf("</ActivityAction.Argument>", aaOpen, StringComparison.OrdinalIgnoreCase);
+            int searchFrom = aaOpen;
+            if (argClose >= 0 && argClose < aaClose)
+                searchFrom = argClose + "</ActivityAction.Argument>".Length;
+
+            int seqOpen = content.IndexOf("<Sequence", searchFrom, StringComparison.OrdinalIgnoreCase);
+            if (seqOpen < 0 || seqOpen >= aaClose)
+                return false;
+
+            rethrowInsertIndex = FindMatchingSequenceClose(content, seqOpen, aaClose);
+            if (rethrowInsertIndex < 0)
+                return false;
+
+            logInsertIndex = FindSequenceBodyInsertStart(content, seqOpen, rethrowInsertIndex);
+            return logInsertIndex >= 0;
+        }
+
+        /// <summary>First content position inside the handler Sequence: after optional leading WorkflowViewState, else right after the opening Sequence tag.</summary>
+        private static int FindSequenceBodyInsertStart(string content, int seqOpen, int seqCloseIndex)
+        {
+            int openTagEnd = content.IndexOf('>', seqOpen);
+            if (openTagEnd < 0 || openTagEnd >= seqCloseIndex)
+                return -1;
+            int innerStart = openTagEnd + 1;
+            const string viewStateClose = "</sap:WorkflowViewStateService.ViewState>";
+            int vsEnd = content.IndexOf(viewStateClose, innerStart, StringComparison.OrdinalIgnoreCase);
+            if (vsEnd >= 0 && vsEnd < seqCloseIndex)
+                return vsEnd + viewStateClose.Length;
+            return innerStart;
+        }
+
+        private static int FindMatchingSequenceClose(string content, int sequenceOpen, int limit)
+        {
+            int depth = 1;
+            int i = sequenceOpen + 1;
+            while (i < limit && depth > 0)
+            {
+                int nextOpen = content.IndexOf("<Sequence", i, StringComparison.OrdinalIgnoreCase);
+                int nextClose = content.IndexOf("</Sequence>", i, StringComparison.OrdinalIgnoreCase);
+                if (nextOpen >= limit)
+                    nextOpen = -1;
+                if (nextClose < 0 || nextClose >= limit)
+                    return -1;
+                if (nextOpen >= 0 && nextOpen < nextClose)
+                {
+                    depth++;
+                    i = nextOpen + 1;
+                }
+                else
+                {
+                    depth--;
+                    if (depth == 0)
+                        return nextClose;
+                    i = nextClose + "</Sequence>".Length;
+                }
+            }
+            return -1;
+        }
+
+        private static int GetLineNumber(string content, int index)
+        {
+            int line = 1;
+            int end = Math.Min(index, content.Length);
+            for (int j = 0; j < end; j++)
+            {
+                if (content[j] == '\n')
+                    line++;
+            }
+            return line;
+        }
+
+        private static string GetIndentationBefore(string content, int insertIndex)
+        {
+            int lastNl = content.LastIndexOf('\n', Math.Max(0, insertIndex - 1));
+            int lineStart = lastNl < 0 ? 0 : lastNl + 1;
+            var sb = new StringBuilder();
+            for (int j = lineStart; j < insertIndex && j < content.Length; j++)
+            {
+                char ch = content[j];
+                if (ch == ' ' || ch == '\t')
+                    sb.Append(ch);
+                else
+                    break;
+            }
+            if (sb.Length == 0)
+                sb.Append("              ");
+            return sb.ToString();
         }
     }
 }

@@ -11,9 +11,9 @@ using AnalyzerHelper.Models;
 namespace AnalyzerHelper.Rules
 {
     /// <summary>
-    /// In a Flowchart, FlowStep / FlowDecision / FlowSwitch nodes must be connected to the flow
-    /// (reachable from Flowchart.StartNode via Next / True / False / Default / cases).
-    /// Orphan nodes (no path from start) are reported; fix removes them automatically.
+    /// FlowStep / FlowDecision / FlowSwitch must be reachable from StartNode (Next / True / False /
+    /// Default / cases, including x:Reference links). Auto-fix removes each disconnected subtree once
+    /// (root only) and deletes sibling x:Reference entries that pointed at removed nodes.
     /// </summary>
     public sealed class FlowchartOrphanNodesRule : IAnalyzerRuleWithFix
     {
@@ -66,15 +66,39 @@ namespace AnalyzerHelper.Rules
             try { doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace); }
             catch { return false; }
 
-            var toRemove = new List<XElement>();
+            bool docChanged = false;
             foreach (var flowchart in doc.Descendants().Where(e => e.Name.LocalName == "Flowchart").ToList())
-                toRemove.AddRange(FindOrphanFlowNodes(flowchart));
+            {
+                var orphans = FindOrphanFlowNodes(flowchart);
+                if (orphans.Count == 0) continue;
 
-            if (toRemove.Count == 0) return false;
+                var orphanSet = orphans.ToHashSet();
+                // Remove one root per disconnected subgraph; removing a root drops all nested flow
+                // nodes, so we must not call Remove() on descendants (detached nodes / errors).
+                var roots = orphans.Where(o => !HasOrphanAncestorInSet(o, orphanSet)).ToList();
+                var removedIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var root in roots.OrderByDescending(GetElementDepth))
+                {
+                    foreach (var fn in root.DescendantsAndSelf().Where(IsFlowNodeType))
+                    {
+                        string? id = GetXName(fn);
+                        if (!string.IsNullOrEmpty(id))
+                            removedIds.Add(id);
+                    }
 
-            foreach (var el in toRemove.OrderByDescending(e => GetElementDepth(e)))
-                try { el.Remove(); }
-                catch { /* skip */ }
+                    try
+                    {
+                        root.Remove();
+                        docChanged = true;
+                    }
+                    catch { /* skip */ }
+                }
+
+                if (RemoveDanglingFlowchartReferences(flowchart, removedIds))
+                    docChanged = true;
+            }
+
+            if (!docChanged) return false;
 
             try
             {
@@ -86,6 +110,34 @@ namespace AnalyzerHelper.Rules
                 newContent = content;
                 return false;
             }
+        }
+
+        private static bool HasOrphanAncestorInSet(XElement node, HashSet<XElement> orphanSet)
+        {
+            for (var p = node.Parent; p != null; p = p.Parent)
+            {
+                if (p is XElement px && orphanSet.Contains(px))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>Removes top-level &lt;x:Reference&gt;…&lt;/x:Reference&gt; under the flowchart whose target was removed.</summary>
+        private static bool RemoveDanglingFlowchartReferences(XElement flowchart, HashSet<string> removedIds)
+        {
+            if (removedIds.Count == 0) return false;
+            bool any = false;
+            foreach (var child in flowchart.Elements().ToList())
+            {
+                if (child.Name.LocalName != "Reference") continue;
+                string id = (child.Value ?? "").Trim();
+                if (!removedIds.Contains(id)) continue;
+                if (child.PreviousNode is XText t && string.IsNullOrWhiteSpace(t.Value))
+                    t.Remove();
+                child.Remove();
+                any = true;
+            }
+            return any;
         }
 
         private static int GetElementDepth(XElement e)
@@ -132,7 +184,10 @@ namespace AnalyzerHelper.Rules
 
             var start = GetStartFlowNode(flowchart);
             if (start == null)
-                return new List<XElement>();
+            {
+                // Start unset (<x:Null />): direct-child flow nodes are not on an entry path.
+                return all.Where(n => n.Parent == flowchart).ToList();
+            }
 
             var reachable = new HashSet<XElement>();
             var q = new Queue<XElement>();
@@ -142,7 +197,7 @@ namespace AnalyzerHelper.Rules
             while (q.Count > 0)
             {
                 var n = q.Dequeue();
-                foreach (var next in GetOutgoingFlowNodes(n))
+                foreach (var next in GetOutgoingFlowNodes(flowchart, n))
                 {
                     if (next != null && all.Contains(next) && reachable.Add(next))
                         q.Enqueue(next);
@@ -170,29 +225,26 @@ namespace AnalyzerHelper.Rules
             var first = startWrapper.Elements().FirstOrDefault();
             if (first == null) return null;
 
+            if (first.Name.LocalName == "Null")
+                return null;
+
             if (first.Name.LocalName == "Reference")
-            {
-                string refId = (first.Value ?? "").Trim();
-                if (string.IsNullOrEmpty(refId)) return null;
-                return flowchart.Descendants()
-                    .Where(IsFlowNodeType)
-                    .FirstOrDefault(e => GetXName(e) == refId);
-            }
+                return ResolveReferenceToFlowNode(flowchart, first);
 
             if (IsFlowNodeType(first)) return first;
             return null;
         }
 
-        /// <summary>Immediate FlowNode targets linked from this node (Next / branches).</summary>
-        private static IEnumerable<XElement> GetOutgoingFlowNodes(XElement node)
+        /// <summary>Immediate FlowNode targets (Next / True / False / Default / cases); follows x:Reference.</summary>
+        private static IEnumerable<XElement> GetOutgoingFlowNodes(XElement flowchart, XElement node)
         {
             string ln = node.Name.LocalName;
 
             if (ln == "FlowStep")
             {
                 foreach (var next in node.Elements().Where(e => e.Name.LocalName == "FlowStep.Next"))
-                foreach (var c in next.Elements())
-                    if (IsFlowNodeType(c)) yield return c;
+                    foreach (var t in EnumerateBranchFlowNodes(flowchart, next))
+                        yield return t;
                 yield break;
             }
 
@@ -202,8 +254,8 @@ namespace AnalyzerHelper.Rules
                 {
                     var branch = node.Elements().FirstOrDefault(e => e.Name.LocalName == branchName);
                     if (branch == null) continue;
-                    foreach (var c in branch.Elements())
-                        if (IsFlowNodeType(c)) yield return c;
+                    foreach (var t in EnumerateBranchFlowNodes(flowchart, branch))
+                        yield return t;
                 }
                 yield break;
             }
@@ -212,18 +264,45 @@ namespace AnalyzerHelper.Rules
             {
                 var def = node.Elements().FirstOrDefault(e => e.Name.LocalName == "FlowSwitch.Default");
                 if (def != null)
-                    foreach (var c in def.Elements())
-                        if (IsFlowNodeType(c)) yield return c;
+                    foreach (var t in EnumerateBranchFlowNodes(flowchart, def))
+                        yield return t;
 
                 foreach (var c in node.Elements())
                 {
                     if (c.Name.LocalName != "FlowStep") continue;
                     if (c.Attribute(XNs + "Key") != null || c.Attribute("Key") != null)
                     {
-                        if (IsFlowNodeType(c)) yield return c;
+                        if (IsFlowNodeType(c))
+                            yield return c;
                     }
                 }
             }
+        }
+
+        private static IEnumerable<XElement> EnumerateBranchFlowNodes(XElement flowchart, XElement branchContainer)
+        {
+            foreach (var c in branchContainer.Elements())
+            {
+                if (IsFlowNodeType(c))
+                {
+                    yield return c;
+                    continue;
+                }
+
+                var resolved = ResolveReferenceToFlowNode(flowchart, c);
+                if (resolved != null)
+                    yield return resolved;
+            }
+        }
+
+        private static XElement? ResolveReferenceToFlowNode(XElement flowchart, XElement el)
+        {
+            if (el.Name.LocalName != "Reference") return null;
+            string refId = (el.Value ?? "").Trim();
+            if (string.IsNullOrEmpty(refId)) return null;
+            return flowchart.Descendants()
+                .Where(IsFlowNodeType)
+                .FirstOrDefault(e => GetXName(e) == refId);
         }
 
     }

@@ -39,7 +39,7 @@ namespace AnalyzerHelper.Rules
         private static readonly XNamespace _actNs =
             XNamespace.Get("http://schemas.microsoft.com/netfx/2009/xaml/activities");
         private static readonly XNamespace _uiNs =
-            XNamespace.Get("http://schemas.uipath.com/workflow/activities");
+            XNamespace.Get("http://s...content-available-to-author-only...h.com/workflow/activities");
         private static readonly XNamespace _xNs =
             XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml");
 
@@ -314,15 +314,54 @@ namespace AnalyzerHelper.Rules
         //  Helpers
         // =====================================================================
 
+        /// <summary>
+        /// Resolves the WorkflowFileName path. UiPath stores these paths
+        /// relative to the **project root** (where project.json lives),
+        /// not relative to the invoking file's directory.
+        /// Falls back to fileDir if no project root is found.
+        /// </summary>
         private static string ResolveTarget(string fileDir, string relPath)
         {
             try
             {
                 string norm = relPath.Replace('/', Path.DirectorySeparatorChar)
                                      .Replace('\\', Path.DirectorySeparatorChar);
-                return Path.GetFullPath(Path.Combine(fileDir, norm));
+
+                // Walk up from the file's directory to find the project root
+                string projectRoot = FindProjectRoot(fileDir);
+                string baseDir = projectRoot ?? fileDir;
+
+                string resolved = Path.GetFullPath(Path.Combine(baseDir, norm));
+                if (File.Exists(resolved)) return resolved;
+
+                // Fallback: try relative to fileDir (for edge cases)
+                if (projectRoot != null)
+                {
+                    string fallback = Path.GetFullPath(Path.Combine(fileDir, norm));
+                    if (File.Exists(fallback)) return fallback;
+                }
+
+                return resolved; // Return the project-root-based path even if not found yet
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Walks up from a directory to find the UiPath project root
+        /// (the directory containing project.json).
+        /// </summary>
+        private static string FindProjectRoot(string startDir)
+        {
+            string dir = startDir;
+            while (!string.IsNullOrEmpty(dir))
+            {
+                if (File.Exists(Path.Combine(dir, "project.json")))
+                    return dir;
+                string parent = Path.GetDirectoryName(dir);
+                if (parent == dir) break; // root reached
+                dir = parent;
+            }
+            return null;
         }
 
         /// <summary>Attribute lookup by local name — namespace-agnostic.</summary>
