@@ -17,7 +17,7 @@ namespace AnalyzerHelper.Rules
     public sealed class RemoveDefaultsVarArgRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-013";
-        public string RuleName => "RemoveDefaultsVarArg";
+        public string RuleName => "Remove Default Values (Variables & Arguments)";
         public string DefaultRecommendation =>
             "Remove default values from Variable and Argument declarations. " +
             "Exempt: strComponentName, strWorkflowName, strProcessIdentifier, dctmailTemplates, " +
@@ -60,14 +60,27 @@ namespace AnalyzerHelper.Rules
             if (!hasRemovableVariableDefaults && !hasRemovableArgumentCompanions && !hasRemovableActivityAttributeDefaults)
                 return results;
 
+            var parts = new List<string>();
+            if (hasRemovableVariableDefaults || hasRemovableActivityAttributeDefaults)
+                parts.Add("Variable");
+            if (hasRemovableArgumentCompanions)
+                parts.Add("Argument");
+
+            string target = string.Join(" and ", parts);
+            string rec = parts.Count == 1 && parts[0] == "Variable"
+                ? "Remove default values from Variable declarations to keep the workflow clean."
+                : parts.Count == 1 && parts[0] == "Argument"
+                ? "Remove default values from Argument declarations to keep the workflow clean."
+                : "Remove default values from Variable and Argument declarations to keep the workflow clean.";
+
             results.Add(new RuleCheckResult
             {
                 RuleId = RuleId,
                 RuleName = RuleName,
                 Level = RuleLevel.Warning,
-                Message = "Variable or Argument default values found (non-exempt). Remove defaults for consistency.",
+                Message = $"{target} default values found (non-exempt). Remove defaults for consistency.",
                 FilePath = filePath,
-                Recommendation = DefaultRecommendation,
+                Recommendation = rec,
                 RequiresUserInteraction = RequiresUserInteraction
             });
 

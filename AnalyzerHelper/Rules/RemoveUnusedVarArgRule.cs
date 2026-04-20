@@ -39,7 +39,7 @@ namespace AnalyzerHelper.Rules
     public sealed class RemoveUnusedVarArgRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-019";
-        public string RuleName => "RemoveUnusedVarArg";
+        public string RuleName => "Remove Unused Variables/Arguments";
         public string DefaultRecommendation =>
             "Variables and arguments use the same usage rules (body expressions, " +
             "selector values, attribute names, element text). Remove unused ones; " +
@@ -134,7 +134,7 @@ namespace AnalyzerHelper.Rules
                     Message = "Duplicate inner variables: " +
                               string.Join(", ", duplicateInnerVarNames.Distinct()) + ".",
                     FilePath = filePath,
-                    Recommendation = DefaultRecommendation,
+                    Recommendation = "Remove inner shadowing variable declarations. Only the outermost declaration should remain.",
                     RequiresUserInteraction = RequiresUserInteraction
                 });
             }
@@ -149,7 +149,7 @@ namespace AnalyzerHelper.Rules
                     Message = "Unused variables: " +
                               string.Join(", ", unusedVarNames) + ".",
                     FilePath = filePath,
-                    Recommendation = DefaultRecommendation,
+                    Recommendation = "Remove unused variables from the workflow to reduce clutter. Variables inside Selector attributes are always kept.",
                     RequiresUserInteraction = RequiresUserInteraction
                 });
             }
@@ -164,7 +164,7 @@ namespace AnalyzerHelper.Rules
                     Message = "Unused arguments: " +
                               string.Join(", ", unusedArgNames) + ".",
                     FilePath = filePath,
-                    Recommendation = DefaultRecommendation,
+                    Recommendation = "Remove unused arguments and their companion default-value elements from the workflow.",
                     RequiresUserInteraction = RequiresUserInteraction
                 });
             }

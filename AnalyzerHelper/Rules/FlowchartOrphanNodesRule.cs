@@ -20,9 +20,9 @@ namespace AnalyzerHelper.Rules
         private static readonly XNamespace XNs = "http://schemas.microsoft.com/winfx/2006/xaml";
 
         public string RuleId => "VF-040";
-        public string RuleName => "Flowchart orphan nodes";
+        public string RuleName => "Unreachable Flowchart Nodes";
         public string DefaultRecommendation =>
-            "Remove disconnected Flowchart nodes or connect them with flow connectors. Auto-fix deletes orphan nodes.";
+            "Remove unreachable nodes from the Flowchart. Use Fix to auto-delete orphan nodes.";
         public bool RequiresUserInteraction => false;
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)

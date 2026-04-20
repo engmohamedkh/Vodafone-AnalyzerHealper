@@ -36,10 +36,9 @@ namespace AnalyzerHelper.Rules
     public sealed class AddRetryScopeCheckTrueRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-014";
-        public string RuleName => "AddRetryScopeCheckTrue";
+        public string RuleName => "Empty Retry Scope Condition";
         public string DefaultRecommendation =>
-            "Add a CheckTrue condition with Expression=\"True\" to empty " +
-            "RetryScope.Condition blocks so the retry loop evaluates correctly.";
+            "Add a CheckTrue with a condition to RetryScope.Condition blocks so the retry loop evaluates correctly.";
         public bool RequiresUserInteraction => false;
 
         // Finds the highest existing CheckTrue_N counter in the whole file
@@ -83,7 +82,7 @@ namespace AnalyzerHelper.Rules
                     RuleId = RuleId,
                     RuleName = RuleName,
                     Level = RuleLevel.Warning,
-                    Message = $"Found {count} RetryScope.Condition block(s) with empty ActivityFunc (no condition set).",
+                    Message = $"Found {count} RetryScope.Condition block(s) with no condition set.",
                     FilePath = filePath,
                     Recommendation = DefaultRecommendation,
                     RequiresUserInteraction = RequiresUserInteraction

@@ -20,7 +20,6 @@ namespace AnalyzerHelper.Rules
             new RemoveUnusedVarArgRule(),
             new SyncInvokeArgumentsRule(),
             new FixComponentNameRule(),
-            new AddRetryScopeCheckTrueRule(),
             new FlowchartOrphanNodesRule(),
             new CetTimeZoneRule(),
             new ConfigConstantsUsageRule(),

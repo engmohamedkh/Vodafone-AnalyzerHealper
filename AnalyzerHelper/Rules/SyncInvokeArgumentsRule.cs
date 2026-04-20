@@ -101,12 +101,12 @@ namespace AnalyzerHelper.Rules
                     {
                         RuleId = RuleId,
                         RuleName = RuleName,
-                        Level = RuleLevel.Warning,
+                        Level = RuleLevel.Error,
                         Message = $"Empty invoke argument — Invoke: \"{displayName}\", " +
                                   $"Workflow: \"{relPath}\", " +
                                   $"Arg: \"{key}\", Type: {info.XType}, Direction: {direction} (missing, will be added empty).",
                         FilePath = filePath,
-                        Recommendation = DefaultRecommendation,
+                        Recommendation = "Add the missing argument to the InvokeWorkflowFile and wire it to the appropriate variable.",
                         RequiresUserInteraction = RequiresUserInteraction
                     });
                 }
@@ -136,7 +136,7 @@ namespace AnalyzerHelper.Rules
                                   $"Workflow: \"{relPath}\", " +
                                   $"Arg: \"{key}\", Type: {typeArg}, Direction: {direction}.",
                         FilePath = filePath,
-                        Recommendation = DefaultRecommendation,
+                        Recommendation = "Wire the empty argument to the appropriate variable or value.",
                         RequiresUserInteraction = RequiresUserInteraction
                     });
                 }
@@ -148,11 +148,11 @@ namespace AnalyzerHelper.Rules
                     {
                         RuleId = RuleId,
                         RuleName = RuleName,
-                        Level = RuleLevel.Info,
+                        Level = RuleLevel.Error,
                         Message = $"Stale invoke argument (will be removed) — Invoke: \"{displayName}\", " +
                                   $"Workflow: \"{relPath}\", Arg: \"{key}\".",
                         FilePath = filePath,
-                        Recommendation = DefaultRecommendation,
+                        Recommendation = "Remove the stale argument that no longer exists in the target workflow.",
                         RequiresUserInteraction = RequiresUserInteraction
                     });
                 }

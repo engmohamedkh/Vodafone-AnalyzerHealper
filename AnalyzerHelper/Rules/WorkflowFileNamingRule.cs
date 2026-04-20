@@ -28,7 +28,7 @@ namespace AnalyzerHelper.Rules
 		public string RuleId => "VF-016";
 		public string RuleName => "WorkflowFileNaming";
 		public string DefaultRecommendation =>
-			"File naming convention not followed. Subprocess: {ShortName}_{Stage}_{WorkflowName}.xaml, Logic: {ShortName}_{WorkflowName}.xaml. Use Fix to rename and update internals.";
+			"Use Fix to rename the file and update internals.";
 		public bool RequiresUserInteraction => true;
 
 		private static readonly XNamespace XNs = "http://schemas.microsoft.com/winfx/2006/xaml";
@@ -120,6 +120,9 @@ namespace AnalyzerHelper.Rules
 
 			if (needsRename)
 			{
+				string recommendation = isSubprocess
+					? "Subprocess files must follow: {ShortName}_{Stage}_{WorkflowName}.xaml. Use Fix to rename and update internals."
+					: "Logic files must follow: {ShortName}_{WorkflowName}.xaml. Use Fix to rename and update internals.";
 				results.Add(new RuleCheckResult
 				{
 					RuleId = RuleId,
@@ -127,7 +130,7 @@ namespace AnalyzerHelper.Rules
 					Level = RuleLevel.Error,
 					Message = message,
 					FilePath = filePath,
-					Recommendation = DefaultRecommendation,
+					Recommendation = recommendation,
 					RequiresUserInteraction = RequiresUserInteraction
 				});
 			}

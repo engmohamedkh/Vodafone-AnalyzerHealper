@@ -7,26 +7,42 @@ using AnalyzerHelper.Models;
 
 namespace AnalyzerHelper.Rules
 {
-    /// <summary>Validates Catch has exception logging and Rethrow. Auto-fix: adds i:Info_Log (IAP) after the handler Sequence opening, Rethrow before the Sequence closes.</summary>
+    /// <summary>
+    /// Validates Catch has exception logging (Error_Log) and Rethrow.
+    /// Auto-fix: replaces existing Info_Log with Error_Log, or adds Error_Log if no log exists.
+    /// Adds Rethrow before the Sequence closes when missing.
+    /// </summary>
     public sealed class TryCatchRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-012";
-        public string RuleName => "TryCatch";
-        public string DefaultRecommendation => "Add i:Info_Log with exception details in StrMessage and a Rethrow in each Catch handler.";
+        public string RuleName => "Missing Catch Block Actions";
+        public string DefaultRecommendation => "Add i:Error_Log with exception details in StrMessage and a Rethrow in each Catch handler.";
         public bool RequiresUserInteraction => false;
 
-        /// <summary>Matches studio style for IAP Info_Log; StrMessage logs source and message for the Catch delegate argument.</summary>
-        private const string InfoLogActivity =
-            @"<i:Info_Log StrMessage=""[exception.Source + &quot; &quot; + exception.Message]"" DisplayName=""Info Log"" sap:VirtualizedContainerService.HintSize=""200,25"" sap2010:WorkflowViewState.IdRef=""Info_Log_VF012"" StrTag=""info"" />";
+        /// <summary>Error_Log template for IAP; StrMessage logs source and message for the Catch delegate argument.</summary>
+        private const string ErrorLogActivity =
+            @"<i:Error_Log StrMessage=""[exception.Source + &quot; &quot; + exception.Message]"" DisplayName=""Error Log"" sap:VirtualizedContainerService.HintSize=""200,25"" sap2010:WorkflowViewState.IdRef=""Error_Log_VF012"" StrTag=""error"" />";
 
         private const string RethrowActivity = @"<Rethrow DisplayName=""Rethrow"" />";
 
-        /// <summary>Do not treat arbitrary attributes (e.g. Process_Monitoring StrExecutionMessage) as the required exception log — only dedicated log activities.</summary>
-        private static readonly Regex CatchHasExplicitExceptionLog = new Regex(
-            @"<ui:Log\b[^>]*\bMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""" +
-            @"|<i:Info_Log\b[^>]*\bStrMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""" +
-            @"|<i:Error_Log\b[^>]*\bStrMessage\s*=\s*""[^""]*exception\.(source|message)[^""]*""",
+        /// <summary>Matches any Info_Log in Catch blocks.</summary>
+        private static readonly Regex CatchHasInfoLog = new Regex(
+            @"<i:Info_Log\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Matches any Error_Log or ui:Log in Catch blocks.</summary>
+        private static readonly Regex CatchHasErrorLog = new Regex(
+            @"<ui:Log\b|<i:Error_Log\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        /// <summary>Matches the full Info_Log tag for in-place replacement.</summary>
+        private static readonly Regex InfoLogFullTag = new Regex(
+            @"<i:Info_Log\b[^>]*?(?:/>|>[\s\S]*?</i:Info_Log>)",
+            RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        // =====================================================================
+        //  Check  (report only)
+        // =====================================================================
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
@@ -40,30 +56,57 @@ namespace AnalyzerHelper.Rules
             foreach (var (catchStart, bodyStart, catchCloseTagStart, _) in catchBlocks)
             {
                 string body = content.Substring(bodyStart, catchCloseTagStart - bodyStart);
-                bool hasInfoLog = CatchHasExplicitExceptionLog.IsMatch(body);
+                bool hasErrorLog = CatchHasErrorLog.IsMatch(body);
+                bool hasInfoLog = CatchHasInfoLog.IsMatch(body);
                 bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                if (!hasInfoLog || !hasRethrow)
+                // If Error_Log (or ui:Log) and Rethrow both exist, nothing to report
+                if (hasErrorLog && hasRethrow) continue;
+
+                var issues = new List<string>();
+                string recommendation;
+
+                if (hasInfoLog && !hasErrorLog)
                 {
-                    int line = GetLineNumber(content, catchStart);
-                    var missing = new List<string>();
-                    if (!hasInfoLog) missing.Add("Info log");
-                    if (!hasRethrow) missing.Add("Rethrow");
-                    results.Add(new RuleCheckResult
-                    {
-                        RuleId = RuleId,
-                        RuleName = RuleName,
-                        Level = RuleLevel.Error,
-                        Message = $"Line {line}: Missing {string.Join(", ", missing)}.",
-                        FilePath = filePath,
-                        Recommendation = DefaultRecommendation,
-                        RequiresUserInteraction = RequiresUserInteraction
-                    });
+                    // Info_Log exists but should be Error_Log
+                    issues.Add("Error log (Info_Log found, should be replaced with Error_Log)");
+                    if (!hasRethrow) issues.Add("Rethrow");
+                    recommendation = !hasRethrow
+                        ? "Replace the existing Info_Log with Error_Log (retaining its message properties) and add a Rethrow in the Catch handler."
+                        : "Replace the existing Info_Log with Error_Log (retaining its message properties) in the Catch handler. Error conditions should use Error_Log.";
                 }
+                else if (!hasErrorLog && !hasInfoLog)
+                {
+                    // No log at all
+                    issues.Add("Error log");
+                    if (!hasRethrow) issues.Add("Rethrow");
+                    recommendation = DefaultRecommendation;
+                }
+                else
+                {
+                    // Has Error_Log but missing Rethrow
+                    issues.Add("Rethrow");
+                    recommendation = "Add a Rethrow activity at the end of the Catch handler to propagate the exception.";
+                }
+
+                results.Add(new RuleCheckResult
+                {
+                    RuleId = RuleId,
+                    RuleName = RuleName,
+                    Level = RuleLevel.Error,
+                    Message = $"Catch block is missing {string.Join(" and ", issues)}.",
+                    FilePath = filePath,
+                    Recommendation = recommendation,
+                    RequiresUserInteraction = RequiresUserInteraction
+                });
             }
 
             return results;
         }
+
+        // =====================================================================
+        //  DefineAndFix  (detect + fix)
+        // =====================================================================
 
         public bool DefineAndFix(string filePath, string content, out string newContent)
         {
@@ -81,39 +124,61 @@ namespace AnalyzerHelper.Rules
                 int adjBodyStart = bodyStart + offset;
                 int adjCatchClose = catchCloseTagStart + offset;
                 string body = newContent.Substring(adjBodyStart, adjCatchClose - adjBodyStart);
-                bool hasInfoLog = CatchHasExplicitExceptionLog.IsMatch(body);
+                bool hasErrorLog = CatchHasErrorLog.IsMatch(body);
+                bool hasInfoLog = CatchHasInfoLog.IsMatch(body);
                 bool hasRethrow = body.IndexOf("<Rethrow", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                if (hasInfoLog && hasRethrow) continue;
-
-                if (!TryGetCatchSequenceInsertPoints(newContent, adjBodyStart, adjCatchClose, out int logInsertIndex, out int rethrowInsertIndex))
-                    continue;
+                if (hasErrorLog && hasRethrow) continue;
 
                 int addedThisCatch = 0;
-                // Insert end (Rethrow) first when both needed so start index stays valid.
-                if (!hasRethrow)
+
+                // Case 1: Info_Log exists -- replace it in-place with Error_Log
+                if (hasInfoLog && !hasErrorLog)
                 {
-                    string indentR = GetIndentationBefore(newContent, rethrowInsertIndex);
-                    string rethrowPart = Environment.NewLine + indentR + RethrowActivity;
-                    newContent = newContent.Substring(0, rethrowInsertIndex) + rethrowPart + newContent.Substring(rethrowInsertIndex);
-                    addedThisCatch += rethrowPart.Length;
+                    string before = newContent.Substring(0, adjBodyStart);
+                    string catchBody = newContent.Substring(adjBodyStart, adjCatchClose - adjBodyStart);
+                    string after = newContent.Substring(adjCatchClose);
+
+                    string fixedBody = ReplaceInfoLogWithErrorLog(catchBody);
+                    int delta = fixedBody.Length - catchBody.Length;
+                    newContent = before + fixedBody + after;
+                    addedThisCatch += delta;
+                    changed = true;
+                }
+                // Case 2: No log at all -- insert Error_Log
+                else if (!hasErrorLog)
+                {
+                    int adjCatchCloseForInsert = adjCatchClose + addedThisCatch;
+                    if (TryGetCatchSequenceInsertPoints(newContent, adjBodyStart, adjCatchCloseForInsert, out int logInsertIndex, out int _))
+                    {
+                        string indentL = GetIndentationBefore(newContent, logInsertIndex);
+                        string logPart = Environment.NewLine + indentL + ErrorLogActivity;
+                        newContent = newContent.Substring(0, logInsertIndex) + logPart + newContent.Substring(logInsertIndex);
+                        addedThisCatch += logPart.Length;
+                        changed = true;
+                    }
                 }
 
-                if (!hasInfoLog)
+                // Missing Rethrow -- insert at end of Sequence (re-read positions after body shift)
+                if (!hasRethrow)
                 {
-                    string indentL = GetIndentationBefore(newContent, logInsertIndex);
-                    string logPart = Environment.NewLine + indentL + InfoLogActivity;
-                    newContent = newContent.Substring(0, logInsertIndex) + logPart + newContent.Substring(logInsertIndex);
-                    addedThisCatch += logPart.Length;
+                    int adjCatchClose2 = catchCloseTagStart + offset + addedThisCatch;
+                    int adjBodyStart2 = bodyStart + offset;
+                    if (TryGetCatchSequenceInsertPoints(newContent, adjBodyStart2, adjCatchClose2, out int _, out int rethrowIdx))
+                    {
+                        string indentR = GetIndentationBefore(newContent, rethrowIdx);
+                        string rethrowPart = Environment.NewLine + indentR + RethrowActivity;
+                        newContent = newContent.Substring(0, rethrowIdx) + rethrowPart + newContent.Substring(rethrowIdx);
+                        addedThisCatch += rethrowPart.Length;
+                        changed = true;
+                    }
                 }
 
                 offset += addedThisCatch;
-                changed = true;
             }
 
             return changed;
         }
-
         /// <summary>Returns (catchStart, bodyStart, catchCloseTagStart, indexAfterCatchTag) for each Catch block.</summary>
         private static List<(int catchStart, int bodyStart, int catchCloseTagStart, int afterCatchEnd)> FindCatchBlocks(string content)
         {
@@ -215,6 +280,21 @@ namespace AnalyzerHelper.Rules
                 }
             }
             return -1;
+        }
+
+        /// <summary>Replaces i:Info_Log tags with i:Error_Log, preserving StrMessage and other attributes.</summary>
+        private static string ReplaceInfoLogWithErrorLog(string body)
+        {
+            return InfoLogFullTag.Replace(body, m =>
+            {
+                string tag = m.Value;
+                tag = Regex.Replace(tag, @"<i:Info_Log\b", "<i:Error_Log", RegexOptions.IgnoreCase);
+                tag = Regex.Replace(tag, @"</i:Info_Log>", "</i:Error_Log>", RegexOptions.IgnoreCase);
+                tag = Regex.Replace(tag, @"DisplayName=""[^""]*Info[^""]*Log[^""]*""", @"DisplayName=""Error Log""", RegexOptions.IgnoreCase);
+                tag = Regex.Replace(tag, @"StrTag=""info""", @"StrTag=""error""", RegexOptions.IgnoreCase);
+                tag = Regex.Replace(tag, @"Info_Log_", "Error_Log_", RegexOptions.IgnoreCase);
+                return tag;
+            });
         }
 
         private static int GetLineNumber(string content, int index)

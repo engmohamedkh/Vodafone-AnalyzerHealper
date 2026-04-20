@@ -76,7 +76,7 @@ namespace AnalyzerHelper.Rules
                         Message = $"Variable \"{varName}\" has Default=\"{currentDefault}\" " +
                                   $"but file name is \"{baseName}\".",
                         FilePath = filePath,
-                        Recommendation = DefaultRecommendation,
+                        Recommendation = $"Set '{varName}' default value to \"{baseName}\" to match the XAML file name.",
                         RequiresUserInteraction = RequiresUserInteraction
                     });
                 }
@@ -103,7 +103,7 @@ namespace AnalyzerHelper.Rules
                             Message = $"Variable \"{varName}\" has Literal default \"{currentValue}\" " +
                                       $"but file name is \"{baseName}\".",
                             FilePath = filePath,
-                            Recommendation = DefaultRecommendation,
+                            Recommendation = $"Set '{varName}' default value to \"{baseName}\" to match the XAML file name.",
                             RequiresUserInteraction = RequiresUserInteraction
                         });
                     }
