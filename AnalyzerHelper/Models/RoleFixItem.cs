@@ -2,14 +2,13 @@ using System.ComponentModel;
 
 namespace AnalyzerHelper.Models
 {
-    /// <summary>A single rule fix item for the UI (No interaction / Need interaction tabs).</summary>
+    /// <summary>A single rule item for the UI (No interaction / Need interaction / Validate only tabs).</summary>
     public class RoleFixItem : INotifyPropertyChanged
     {
         private string _ruleId = "";
         private string _displayName = "";
         private string _description = "";
         private FixCategory _category;
-        private bool _canAutofix;
         private bool _isSelected;
 
         public string RuleId { get => _ruleId; set { _ruleId = value; OnPropertyChanged(nameof(RuleId)); } }
@@ -19,16 +18,26 @@ namespace AnalyzerHelper.Models
         public FixCategory Category
         {
             get => _category;
-            set { _category = value; _canAutofix = value == FixCategory.AutoFix; OnPropertyChanged(nameof(Category)); OnPropertyChanged(nameof(CanAutofix)); OnPropertyChanged(nameof(CategoryLabel)); }
+            set
+            {
+                _category = value;
+                OnPropertyChanged(nameof(Category));
+                OnPropertyChanged(nameof(CanAutofix));
+                OnPropertyChanged(nameof(IsValidateOnly));
+                OnPropertyChanged(nameof(CategoryLabel));
+            }
         }
 
-        public bool CanAutofix
+        public bool CanAutofix => Category == FixCategory.AutoFix;
+        public bool IsValidateOnly => Category == FixCategory.ValidateOnly;
+
+        public string CategoryLabel => Category switch
         {
-            get => _canAutofix;
-            set { _canAutofix = value; _category = value ? FixCategory.AutoFix : FixCategory.RequiresUserInteraction; OnPropertyChanged(nameof(CanAutofix)); OnPropertyChanged(nameof(Category)); OnPropertyChanged(nameof(CategoryLabel)); }
-        }
-
-        public string CategoryLabel => Category == FixCategory.AutoFix ? "Auto fix" : "Requires your input";
+            FixCategory.AutoFix => "Auto fix",
+            FixCategory.RequiresUserInteraction => "Requires your input",
+            FixCategory.ValidateOnly => "Validate only",
+            _ => "Unknown"
+        };
 
         public bool IsSelected
         {

@@ -26,11 +26,19 @@ namespace AnalyzerHelper.Models
         public string Recommendation { get; set; } = "";
         public string Level { get; set; } = "";
 
+        /// <summary>False for validate-only findings (no fix path).</summary>
+        public bool IsFixable { get; set; } = true;
+
         /// <summary>Whether the user has checked this row to include in a fix batch.</summary>
         public bool IsSelectedForFix
         {
             get => _isSelectedForFix;
-            set { _isSelectedForFix = value; OnPropertyChanged(nameof(IsSelectedForFix)); }
+            set
+            {
+                if (!IsFixable && value) return;
+                _isSelectedForFix = value;
+                OnPropertyChanged(nameof(IsSelectedForFix));
+            }
         }
 
         /// <summary>Whether this row has already been fixed.</summary>

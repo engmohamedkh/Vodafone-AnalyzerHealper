@@ -19,7 +19,8 @@ namespace AnalyzerHelper.Rules
     /// </summary>
     public sealed class HandleCommentedActivitiesRule : IBatchAnalyzerRuleWithFix
     {
-        public string RuleId => "VF-015";
+        // Studio CommentOutActivity is VF-027; VF-015 is BusinessSystemException (validate-only).
+        public string RuleId => "VF-027";
         public string RuleName => "HandleCommentedActivities";
         public string DefaultRecommendation =>
             "Commented-out activities found. Use the Fix tab and choose for each: Delete (remove) or Uncomment (restore).";

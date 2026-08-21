@@ -9,6 +9,7 @@
     <Color x:Key="TextSecondaryColor">#666666</Color>
     <Color x:Key="AutoFixColor">#2E7D32</Color>
     <Color x:Key="UserInputColor">#1565C0</Color>
+    <Color x:Key="ValidateOnlyColor">#6A1B9A</Color>
     <Color x:Key="BorderColor">#E0E0E0</Color>
     <Color x:Key="HeaderTextColor">#FFFFFF</Color>
 
@@ -20,6 +21,7 @@
     <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource TextSecondaryColor}"/>
     <SolidColorBrush x:Key="AutoFixBrush" Color="{StaticResource AutoFixColor}"/>
     <SolidColorBrush x:Key="UserInputBrush" Color="{StaticResource UserInputColor}"/>
+    <SolidColorBrush x:Key="ValidateOnlyBrush" Color="{StaticResource ValidateOnlyColor}"/>
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
     <SolidColorBrush x:Key="HeaderTextBrush" Color="{StaticResource HeaderTextColor}"/>
 </ResourceDictionary>

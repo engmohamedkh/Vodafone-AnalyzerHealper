@@ -491,6 +491,67 @@
                         </Grid>
                     </TabItem>
 
+                    <!-- ── Tab: Validate Only ── -->
+                    <TabItem x:Name="TabValidateOnly" Style="{StaticResource TabItemStyle}">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6"
+                                         Fill="{StaticResource ValidateOnlyBrush}"
+                                         VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="Validate Only"
+                                           FontWeight="SemiBold" FontSize="10.5"
+                                           Foreground="{StaticResource ValidateOnlyBrush}"/>
+                                <TextBlock x:Name="ValidateOnlyCount" Text=" (0)"
+                                           FontSize="10.5"
+                                           Foreground="{StaticResource ValidateOnlyBrush}"
+                                           Margin="1,0,0,0"/>
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       Text="Full rule list for validation (includes autofix and need-interaction rules)."
+                                       FontSize="10.5" Foreground="{StaticResource TextSecondary}"
+                                       TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <Grid Grid.Row="1" Margin="0,0,0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button x:Name="SelectAllValidateOnly" Content="Select All"
+                                            Click="SelectAllRules_Click" Tag="ValidateOnly"
+                                            Style="{StaticResource ActionButton}" Margin="0,0,3,0"/>
+                                    <Button x:Name="ClearValidateOnly" Content="Clear"
+                                            Click="ClearRulesSelection_Click" Tag="ValidateOnly"
+                                            Style="{StaticResource SecondaryButton}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                            HorizontalAlignment="Right">
+                                    <Button x:Name="RunRulesButtonValidateOnly" Content="▶ Validate"
+                                            Click="RunRules_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </StackPanel>
+                            </Grid>
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                          PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
+                                <ListBox x:Name="ValidateOnlyList"
+                                         BorderThickness="0" Background="Transparent"
+                                         ItemsSource="{Binding ValidateOnlyItems}"
+                                         ItemContainerStyle="{StaticResource RoleFixItemStyle}"
+                                         ItemTemplate="{StaticResource RuleCardTemplate}"
+                                         SelectionChanged="RuleListBox_SelectionChanged"
+                                         MouseDoubleClick="RuleListBox_MouseDoubleClick"
+                                         PreviewMouseLeftButtonUp="RuleListBox_RowClick"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
                     <!-- ── Tab: Analyzer Report ── -->
                     <TabItem x:Name="TabAnalyzerReport" Style="{StaticResource TabItemStyle}">
                         <TabItem.Header>
@@ -736,12 +797,20 @@
                                                     <Setter Property="HorizontalAlignment" Value="Center"/>
                                                     <Setter Property="VerticalAlignment" Value="Center"/>
                                                     <Setter Property="IsHitTestVisible" Value="True"/>
+                                                    <Setter Property="IsEnabled" Value="{Binding IsFixable}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsFixable}" Value="False">
+                                                            <Setter Property="Opacity" Value="0.35"/>
+                                                            <Setter Property="ToolTip" Value="Validate only — no fix available"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
                                                 </Style>
                                             </DataGridCheckBoxColumn.ElementStyle>
                                             <DataGridCheckBoxColumn.EditingElementStyle>
                                                 <Style TargetType="CheckBox">
                                                     <Setter Property="HorizontalAlignment" Value="Center"/>
                                                     <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="IsEnabled" Value="{Binding IsFixable}"/>
                                                 </Style>
                                             </DataGridCheckBoxColumn.EditingElementStyle>
                                         </DataGridCheckBoxColumn>

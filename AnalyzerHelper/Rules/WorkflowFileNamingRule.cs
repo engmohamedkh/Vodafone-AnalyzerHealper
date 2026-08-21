@@ -25,7 +25,8 @@ namespace AnalyzerHelper.Rules
 	/// </summary>
 	public sealed class WorkflowFileNamingRule : IBatchAnalyzerRuleWithFix
 	{
-		public string RuleId => "VF-016";
+		// Helper-only interactive naming fix; VF-016 is ProhibitedActivities (validate-only).
+		public string RuleId => "VF-065";
 		public string RuleName => "WorkflowFileNaming";
 		public string DefaultRecommendation =>
 			"Use Fix to rename the file and update internals.";

@@ -11,4 +11,9 @@
     <PackageReference Include="UiPath.Activities.Api" Version="22.4.1" />
   </ItemGroup>
 
+  <!-- Stub references ITemplateModel missing from UiPath.Activities.Api 22.4.1; unused by Studio plugin. -->
+  <ItemGroup>
+    <Compile Remove="WorkflowModelStub.cs" />
+  </ItemGroup>
+
 </Project>

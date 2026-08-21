@@ -26,12 +26,14 @@ namespace AnalyzerHelper.View
     {
         private readonly ObservableCollection<RoleFixItem> _autoFixItems = new();
         private readonly ObservableCollection<RoleFixItem> _userInputItems = new();
+        private readonly ObservableCollection<RoleFixItem> _validateOnlyItems = new();
         private readonly ObservableCollection<SolutionFileItem> _solutionFiles = new();
         private readonly ObservableCollection<SolutionTreeNode> _fileTreeRoots = new();
         private readonly ObservableCollection<AnalyzerReportRow> _reportRows = new();
 
         public ObservableCollection<RoleFixItem> AutoFixItems => _autoFixItems;
         public ObservableCollection<RoleFixItem> UserInputItems => _userInputItems;
+        public ObservableCollection<RoleFixItem> ValidateOnlyItems => _validateOnlyItems;
         public ObservableCollection<SolutionFileItem> SolutionFiles => _solutionFiles;
         public ObservableCollection<SolutionTreeNode> FileTreeRoots => _fileTreeRoots;
         public ObservableCollection<AnalyzerReportRow> ReportRows => _reportRows;
@@ -149,12 +151,16 @@ namespace AnalyzerHelper.View
         {
             _autoFixItems.Clear();
             _userInputItems.Clear();
+            _validateOnlyItems.Clear();
 
             foreach (var item in RoleFixRegistry.GetNoInteractionRoles())
                 _autoFixItems.Add(item);
 
             foreach (var item in RoleFixRegistry.GetNeedInteractionRoles())
                 _userInputItems.Add(item);
+
+            foreach (var item in RoleFixRegistry.GetValidateOnlyRoles())
+                _validateOnlyItems.Add(item);
 
             UpdateCounts();
         }
@@ -163,6 +169,8 @@ namespace AnalyzerHelper.View
         {
             NoInteractionCount.Text = $" ({_autoFixItems.Count})";
             NeedInteractionCount.Text = $" ({_userInputItems.Count})";
+            if (ValidateOnlyCount != null)
+                ValidateOnlyCount.Text = $" ({_validateOnlyItems.Count})";
         }
 
         // =====================================================================
@@ -276,6 +284,7 @@ namespace AnalyzerHelper.View
             _reportRows.Clear();
             foreach (var item in _autoFixItems) item.IsSelected = false;
             foreach (var item in _userInputItems) item.IsSelected = false;
+            foreach (var item in _validateOnlyItems) item.IsSelected = false;
             
             StopSolutionWatcher();
             UpdateFilesSelectionSummary();
@@ -569,7 +578,14 @@ namespace AnalyzerHelper.View
         private void SelectAllRules_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement fe || fe.Tag is not string tag) return;
-            var collection = tag == "NoInteraction" ? _autoFixItems : _userInputItems;
+            var collection = tag switch
+            {
+                "NoInteraction" => _autoFixItems,
+                "NeedInteraction" => _userInputItems,
+                "ValidateOnly" => _validateOnlyItems,
+                _ => null
+            };
+            if (collection == null) return;
             foreach (var item in collection) item.IsSelected = true;
             UpdateSelectedRulesSummary();
         }
@@ -577,7 +593,14 @@ namespace AnalyzerHelper.View
         private void ClearRulesSelection_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement fe || fe.Tag is not string tag) return;
-            var collection = tag == "NoInteraction" ? _autoFixItems : _userInputItems;
+            var collection = tag switch
+            {
+                "NoInteraction" => _autoFixItems,
+                "NeedInteraction" => _userInputItems,
+                "ValidateOnly" => _validateOnlyItems,
+                _ => null
+            };
+            if (collection == null) return;
             foreach (var item in collection) item.IsSelected = false;
             UpdateSelectedRulesSummary();
         }
@@ -592,10 +615,12 @@ namespace AnalyzerHelper.View
             }
         }
 
-        /// <summary>Gets selected rules from BOTH tabs combined.</summary>
+        /// <summary>Gets selected rules from ALL rule tabs combined.</summary>
         private int GetTotalSelectedRulesCount()
         {
-            return _autoFixItems.Count(r => r.IsSelected) + _userInputItems.Count(r => r.IsSelected);
+            return _autoFixItems.Count(r => r.IsSelected)
+                 + _userInputItems.Count(r => r.IsSelected)
+                 + _validateOnlyItems.Count(r => r.IsSelected);
         }
 
         private void UpdateSelectedRulesSummary()
@@ -606,9 +631,12 @@ namespace AnalyzerHelper.View
             var allSelected = GetAllSelectedRules();
             var totalSelected = allSelected.Count;
             bool hasFiles = _solutionFiles.Count > 0;
+            var fixableSelected = allSelected.Where(r => r.Category != FixCategory.ValidateOnly).ToList();
 
             RunRulesButtonNoInt.IsEnabled = RunRulesButtonNeedInt.IsEnabled = RunRulesButtonReport.IsEnabled = hasFiles;
-            ApplyFixButtonNoInt.IsEnabled = ApplyFixButtonNeedInt.IsEnabled = hasFiles && allSelected.Count > 0;
+            if (RunRulesButtonValidateOnly != null)
+                RunRulesButtonValidateOnly.IsEnabled = hasFiles;
+            ApplyFixButtonNoInt.IsEnabled = ApplyFixButtonNeedInt.IsEnabled = hasFiles && fixableSelected.Count > 0;
 
             if (totalSelected == 0)
             {
@@ -625,7 +653,9 @@ namespace AnalyzerHelper.View
             else if (totalSelected > 0)
             {
                 SelectedRuleId.Text = $"{totalSelected} Rule(s) Selected";
-                SelectedDescription.Text = "Only these rules will be validated or fixed.";
+                SelectedDescription.Text = fixableSelected.Count == 0
+                    ? "Validate only — findings will appear in the report (no fix)."
+                    : "Only these rules will be validated or fixed.";
             }
         }
 
@@ -639,7 +669,12 @@ namespace AnalyzerHelper.View
             var list = new List<RoleFixItem>();
             list.AddRange(_autoFixItems.Where(r => r.IsSelected));
             list.AddRange(_userInputItems.Where(r => r.IsSelected));
-            return list;
+            list.AddRange(_validateOnlyItems.Where(r => r.IsSelected));
+            // Same rule can appear on Validate Only and a fix tab — keep one entry per RuleId
+            return list
+                .GroupBy(r => r.RuleId, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
         }
 
         // =====================================================================
@@ -677,11 +712,14 @@ namespace AnalyzerHelper.View
         {
             var selectedCount = _reportRows.Count(r => r.IsSelectedForFix);
             var fixedCount = _reportRows.Count(r => r.IsFixed);
-            var unfixedCount = _reportRows.Count - fixedCount;
+            var unfixedCount = _reportRows.Count(r => r.IsFixable && !r.IsFixed);
+            var validateOnlyCount = _reportRows.Count(r => !r.IsFixable);
 
             ReportSelectionCounter.Text = $"{selectedCount} Selected for Fix";
             ReportFixedCounter.Text = $"{fixedCount} Fixed";
-            ReportUnfixedCounter.Text = $"{unfixedCount} Unfixed";
+            ReportUnfixedCounter.Text = validateOnlyCount > 0
+                ? $"{unfixedCount} Unfixed · {validateOnlyCount} Report-only"
+                : $"{unfixedCount} Unfixed";
         }
 
         private void SelectAllReportRows_Click(object sender, RoutedEventArgs e)
@@ -832,10 +870,11 @@ namespace AnalyzerHelper.View
 
         private void FixSelectedReport_Click(object sender, RoutedEventArgs e)
         {
-            var selectedRows = _reportRows.Where(r => r.IsSelectedForFix && !r.IsFixed).ToList();
+            var selectedRows = _reportRows.Where(r => r.IsSelectedForFix && !r.IsFixed && r.IsFixable).ToList();
             if (selectedRows.Count == 0)
             {
-                System.Windows.MessageBox.Show("Please select report rows to fix first.",
+                System.Windows.MessageBox.Show(
+                    "Please select fixable report rows first.\nValidate-only findings cannot be fixed.",
                     "Fix Selected", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -961,12 +1000,18 @@ namespace AnalyzerHelper.View
                         RuleId = r.RuleId,
                         RuleName = RoleFixRegistry.HumanizeRuleName(r.RuleName),
                         Level = r.Level.ToString(),
-                        Category = r.Level == RuleLevel.Error ? "Error" : "Warning",
+                        Category = r.Level switch
+                        {
+                            RuleLevel.Error => "Error",
+                            RuleLevel.Info => "Info",
+                            _ => "Warning"
+                        },
                         ResultMessage = r.Message,
                         HasErrors = r.Level == RuleLevel.Error,
                         FilePath = pathStr,
                         Recommendation = r.Recommendation ?? "",
-                        Source = "Standard rules"
+                        Source = "Standard rules",
+                        IsFixable = RoleFixRegistry.IsRuleFixable(r.RuleId)
                     };
                     row.OriginalFilePath = r.FilePath; // Store absolute just in case
                     row.PropertyChanged += OnReportRowPropertyChanged;
@@ -987,9 +1032,10 @@ namespace AnalyzerHelper.View
 
                 var errCount = results.Count(x => x.Level == RuleLevel.Error);
                 var warnCount = results.Count(x => x.Level == RuleLevel.Warning);
+                var infoCount = results.Count(x => x.Level == RuleLevel.Info);
                 System.Windows.MessageBox.Show(
                     $"Checked {filePaths.Count} file(s) · {rulesToRun.Count} rule(s)\n" +
-                    $"Found {errCount} error(s), {warnCount} warning(s)",
+                    $"Found {errCount} error(s), {warnCount} warning(s), {infoCount} info",
                     "Validation", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -1010,7 +1056,9 @@ namespace AnalyzerHelper.View
         private void ApplyFix_Click(object sender, RoutedEventArgs e)
         {
             var selectedFiles = GetSelectedFiles();
-            var selectedRules = GetAllSelectedRules();
+            var selectedRules = GetAllSelectedRules()
+                .Where(r => r.Category != FixCategory.ValidateOnly)
+                .ToList();
 
             if (selectedFiles.Count == 0)
             {
@@ -1020,7 +1068,9 @@ namespace AnalyzerHelper.View
             }
             if (selectedRules.Count == 0)
             {
-                System.Windows.MessageBox.Show("Please select one or more rules first.", "Apply Fix",
+                System.Windows.MessageBox.Show(
+                    "Please select one or more fixable rules first.\nValidate-only rules cannot be fixed.",
+                    "Apply Fix",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
