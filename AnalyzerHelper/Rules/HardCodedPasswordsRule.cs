@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AnalyzerHelper.Interfaces;
 using AnalyzerHelper.Models;
@@ -15,6 +16,11 @@ namespace AnalyzerHelper.Rules
         public string DefaultRecommendation =>
             "Do not use hardcoded passwords. Prefer SecureString from Orchestrator/Config credentials.";
         public bool RequiresUserInteraction => false;
+
+        // Config credential dictionary: crddctroboCred("key").SecureString (optional in_/io_/out_ prefix)
+        private static readonly Regex ConfigCredentialRegex = new Regex(
+            @"\b(?:in_|io_|out_)?crddctroboCred\s*\(",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
@@ -33,13 +39,21 @@ namespace AnalyzerHelper.Rules
                     if (n.IndexOf("Password", StringComparison.OrdinalIgnoreCase) < 0) continue;
                     if (string.IsNullOrWhiteSpace(attr.Value)) continue;
 
+                    string expr = attr.Value;
+
+                    // Config credential SecureString is valid (reusable components often bind Password = crddctroboCred("key").SecureString)
+                    if (IsConfigCredentialExpression(expr))
+                        continue;
+
                     bool isSecureName = n.IndexOf("SecurePassword", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                         n.IndexOf("Secure", StringComparison.OrdinalIgnoreCase) >= 0;
-                    if (!isSecureName)
+                    bool usesSecureStringExpr = expr.IndexOf(".SecureString", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (!isSecureName && !usesSecureStringExpr)
                     {
                         messages.Add($"The following activity {display} is using string password property. Please use the secure string instead.");
                     }
-                    else if (attr.Value.Contains("\",\""))
+                    else if (IsHardCodedSecurePasswordExpression(expr))
                     {
                         messages.Add($"The following activity {display} has hard coded secure password value.");
                     }
@@ -47,15 +61,8 @@ namespace AnalyzerHelper.Rules
 
                 foreach (var varEl in el.Descendants().Where(e => e.Name.LocalName == "Variable"))
                 {
-                    string typeHint = string.Join(" ", varEl.Attributes().Select(a => a.Value));
-                    if (typeHint.IndexOf("SecureString", StringComparison.OrdinalIgnoreCase) < 0) continue;
-
-                    bool hasDefault = varEl.Attributes().Any(a =>
-                            string.Equals(a.Name.LocalName, "Default", StringComparison.OrdinalIgnoreCase) &&
-                            !string.IsNullOrWhiteSpace(a.Value))
-                        || varEl.Elements().Any(e => e.Name.LocalName == "Variable.Default");
-                    if (hasDefault)
-                        messages.Add($"The following activity {display} has hard coded password variable.");
+                    if (!IsSecureStringVariableWithHardCodedDefault(varEl)) continue;
+                    messages.Add($"The following activity {display} has hard coded password variable.");
                 }
 
                 foreach (var msg in messages.Distinct())
@@ -75,13 +82,7 @@ namespace AnalyzerHelper.Rules
             // Also scan workflow-level variables
             foreach (var varEl in doc.Descendants().Where(e => e.Name.LocalName == "Variable"))
             {
-                string typeHint = string.Join(" ", varEl.Attributes().Select(a => a.Value));
-                if (typeHint.IndexOf("SecureString", StringComparison.OrdinalIgnoreCase) < 0) continue;
-                bool hasDefault = varEl.Attributes().Any(a =>
-                        string.Equals(a.Name.LocalName, "Default", StringComparison.OrdinalIgnoreCase) &&
-                        !string.IsNullOrWhiteSpace(a.Value))
-                    || varEl.Elements().Any(e => e.Name.LocalName == "Variable.Default");
-                if (!hasDefault) continue;
+                if (!IsSecureStringVariableWithHardCodedDefault(varEl)) continue;
 
                 string name = varEl.Attributes()
                     .FirstOrDefault(a => string.Equals(a.Name.LocalName, "Name", StringComparison.OrdinalIgnoreCase))
@@ -98,6 +99,57 @@ namespace AnalyzerHelper.Rules
             }
 
             return results;
+        }
+
+        /// <summary>True when expression loads a credential from Config (e.g. crddctroboCred("name").SecureString).</summary>
+        private static bool IsConfigCredentialExpression(string expr) =>
+            !string.IsNullOrWhiteSpace(expr) && ConfigCredentialRegex.IsMatch(expr);
+
+        /// <summary>
+        /// NetworkCredential("user","literalPassword") style hardcoding.
+        /// Config credential dictionary access is not treated as hardcoded.
+        /// </summary>
+        private static bool IsHardCodedSecurePasswordExpression(string expr)
+        {
+            if (string.IsNullOrWhiteSpace(expr)) return false;
+            if (IsConfigCredentialExpression(expr)) return false;
+            return expr.Contains("\",\"");
+        }
+
+        private static bool IsSecureStringVariableWithHardCodedDefault(XElement varEl)
+        {
+            string typeHint = string.Join(" ", varEl.Attributes().Select(a => a.Value));
+            if (typeHint.IndexOf("SecureString", StringComparison.OrdinalIgnoreCase) < 0) return false;
+
+            string defaultExpr = GetVariableDefaultExpression(varEl);
+            if (string.IsNullOrWhiteSpace(defaultExpr)) return false;
+
+            // Default from Config credentials is valid at runtime
+            if (IsConfigCredentialExpression(defaultExpr)) return false;
+
+            return true;
+        }
+
+        private static string GetVariableDefaultExpression(XElement varEl)
+        {
+            var defaultAttr = varEl.Attributes()
+                .FirstOrDefault(a => string.Equals(a.Name.LocalName, "Default", StringComparison.OrdinalIgnoreCase));
+            if (defaultAttr != null && !string.IsNullOrWhiteSpace(defaultAttr.Value))
+                return defaultAttr.Value;
+
+            var defaultEl = varEl.Elements().FirstOrDefault(e => e.Name.LocalName == "Variable.Default");
+            if (defaultEl == null) return null;
+
+            // Prefer nested expression text; fall back to concatenated values
+            string text = string.Concat(defaultEl.DescendantNodes().OfType<XText>().Select(t => t.Value)).Trim();
+            if (!string.IsNullOrWhiteSpace(text)) return text;
+
+            var valueAttr = defaultEl.DescendantsAndSelf()
+                .SelectMany(e => e.Attributes())
+                .FirstOrDefault(a =>
+                    string.Equals(a.Name.LocalName, "ExpressionText", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(a.Name.LocalName, "Value", StringComparison.OrdinalIgnoreCase));
+            return valueAttr?.Value;
         }
     }
 }

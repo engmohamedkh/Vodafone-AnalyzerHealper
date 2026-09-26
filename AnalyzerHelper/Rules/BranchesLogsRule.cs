@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using AnalyzerHelper.Interfaces;
 using AnalyzerHelper.Models;
 using AnalyzerHelper.View;
@@ -11,7 +12,8 @@ namespace AnalyzerHelper.Rules
 {
     /// <summary>
     /// Validates that FlowDecision (True/False) and FlowSwitch (Default and Cases) branches
-    /// contain an Info_Log, Message_Log, or Error_Log activity. Fix shows a batch table for ALL branches.
+    /// contain an Info_Log, Message_Log, or Error_Log at that branch level (until the next
+    /// FlowDecision/FlowSwitch). Fix shows a batch table for ALL branches.
     /// </summary>
     public sealed class BranchesLogsRule : IBatchAnalyzerRuleWithFix
     {
@@ -363,16 +365,197 @@ namespace AnalyzerHelper.Rules
             return true;
         }
 
+        private static readonly XNamespace XamlNs = "http://schemas.microsoft.com/winfx/2006/xaml";
+
+        /// <summary>
+        /// True if a log exists in this branch content before the next FlowDecision/FlowSwitch.
+        /// Does not treat x:Reference as a log (use HasFlowDecisionBranchLog for flowchart branches).
+        /// </summary>
         private static bool HasLogActivity(string branchContent)
         {
             if (string.IsNullOrWhiteSpace(branchContent)) return false;
-            if (LogActivityPattern.IsMatch(branchContent)) return true;
-            
-            // If the branch only contains a reference to another node (Flowchart style), 
-            // we skip it for now as we can't easily insert a log there without knowing the target node.
-            if (branchContent.Contains("<x:Reference") || branchContent.Contains("<av:Reference")) return true;
-            
+            string scoped = ContentUntilNextFlowDecisionOrSwitch(branchContent);
+            return LogActivityPattern.IsMatch(scoped);
+        }
+
+        /// <summary>
+        /// FlowDecision True/False: require Info/Message/Error log along the branch chain
+        /// until (but not inside) the next FlowDecision or FlowSwitch. Resolves x:Reference.
+        /// </summary>
+        private static bool HasFlowDecisionBranchLog(string branchInner, string fullFileContent)
+        {
+            if (string.IsNullOrWhiteSpace(branchInner)) return false;
+
+            if (XamlActivityHelper.TryParse(fullFileContent, out var doc) && doc?.Root != null)
+            {
+                var start = ResolveBranchStartFlowNode(doc, branchInner);
+                if (start != null)
+                    return FlowNodeChainHasLogUntilNextDecision(doc, start, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            }
+
+            // Fallback when XML parse / resolve fails: scope string content only
+            return HasLogActivity(branchInner);
+        }
+
+        /// <summary>Content before the first nested FlowDecision / FlowSwitch element.</summary>
+        private static string ContentUntilNextFlowDecisionOrSwitch(string content)
+        {
+            if (string.IsNullOrEmpty(content)) return content;
+
+            int cut = content.Length;
+            foreach (var tag in new[] { "FlowDecision", "FlowSwitch" })
+            {
+                foreach (var (start, _) in FindBalancedBlocks(content, tag))
+                {
+                    if (start >= 0 && start < cut)
+                        cut = start;
+                }
+            }
+
+            return cut < content.Length ? content.Substring(0, cut) : content;
+        }
+
+        private static XElement? ResolveBranchStartFlowNode(XDocument doc, string branchInner)
+        {
+            string trimmed = branchInner.TrimStart();
+            if (trimmed.Length == 0) return null;
+
+            // <x:Reference>id</x:Reference>
+            var refMatch = Regex.Match(trimmed,
+                @"^<(?:\w+:)?Reference\b[^>]*>([^<]+)</(?:\w+:)?Reference>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (refMatch.Success)
+                return FindFlowNodeByXName(doc, refMatch.Groups[1].Value.Trim());
+
+            // Inline FlowStep / FlowDecision / FlowSwitch (prefer x:Name lookup in full chart)
+            var nameMatch = Regex.Match(trimmed,
+                @"^<(?:\w+:)?(FlowStep|FlowDecision|FlowSwitch)\b[^>]*\bx:Name\s*=\s*[""']([^""']+)[""']",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (nameMatch.Success)
+            {
+                var byName = FindFlowNodeByXName(doc, nameMatch.Groups[2].Value);
+                if (byName != null) return byName;
+            }
+
+            // Last resort: first flow node under any Flowchart whose serialized start matches
+            string? local = null;
+            var typeMatch = Regex.Match(trimmed, @"^<(?:\w+:)?(FlowStep|FlowDecision|FlowSwitch)\b", RegexOptions.IgnoreCase);
+            if (typeMatch.Success) local = typeMatch.Groups[1].Value;
+
+            if (local != null)
+            {
+                // Use the opening-tag fingerprint from branch to locate the node in the document
+                int tagEnd = trimmed.IndexOf('>');
+                if (tagEnd > 0)
+                {
+                    string openTag = trimmed.Substring(0, tagEnd + 1);
+                    foreach (var fc in doc.Descendants().Where(e => e.Name.LocalName == "Flowchart"))
+                    {
+                        foreach (var n in fc.Descendants().Where(e => e.Name.LocalName.Equals(local, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            string serialized = n.ToString(SaveOptions.DisableFormatting);
+                            if (serialized.StartsWith(openTag, StringComparison.OrdinalIgnoreCase) ||
+                                openTag.Length > 20 && serialized.IndexOf(openTag.Substring(0, Math.Min(openTag.Length, 80)), StringComparison.OrdinalIgnoreCase) >= 0)
+                                return n;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static XElement? FindFlowNodeByXName(XDocument doc, string xName)
+        {
+            if (string.IsNullOrWhiteSpace(xName)) return null;
+            return doc.Descendants()
+                .FirstOrDefault(e =>
+                {
+                    string ln = e.Name.LocalName;
+                    if (ln != "FlowStep" && ln != "FlowDecision" && ln != "FlowSwitch") return false;
+                    string? name = (string?)e.Attribute(XamlNs + "Name") ?? (string?)e.Attribute("Name");
+                    return string.Equals(name, xName, StringComparison.OrdinalIgnoreCase);
+                });
+        }
+
+        /// <summary>
+        /// Walk FlowStep → Next … looking for a log activity. Stop when a FlowDecision/FlowSwitch is reached
+        /// (logs inside that next decision do not count for the current branch level).
+        /// </summary>
+        private static bool FlowNodeChainHasLogUntilNextDecision(XDocument doc, XElement node, HashSet<string> visited)
+        {
+            if (node == null) return false;
+
+            string? id = (string?)node.Attribute(XamlNs + "Name") ?? (string?)node.Attribute("Name");
+            if (!string.IsNullOrEmpty(id) && !visited.Add(id))
+                return false;
+
+            string ln = node.Name.LocalName;
+
+            // Branch points directly at another decision → no log at this level yet
+            if (ln == "FlowDecision" || ln == "FlowSwitch")
+                return false;
+
+            if (ln == "FlowStep")
+            {
+                if (FlowStepHasLogActivity(node))
+                    return true;
+
+                var next = GetFlowStepNextTarget(doc, node);
+                if (next == null) return false;
+                if (next.Name.LocalName == "FlowDecision" || next.Name.LocalName == "FlowSwitch")
+                    return false;
+
+                return FlowNodeChainHasLogUntilNextDecision(doc, next, visited);
+            }
+
             return false;
+        }
+
+        private static bool FlowStepHasLogActivity(XElement flowStep)
+        {
+            foreach (var child in flowStep.Elements())
+            {
+                if (child.Name.LocalName == "FlowStep.Next") continue;
+                if (ElementHasLogBeforeNestedDecision(child))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool ElementHasLogBeforeNestedDecision(XElement el)
+        {
+            string ln = el.Name.LocalName;
+            if (ln == "FlowDecision" || ln == "FlowSwitch")
+                return false;
+            if (ln == "Info_Log" || ln == "Message_Log" || ln == "Error_Log")
+                return true;
+
+            foreach (var child in el.Elements())
+            {
+                if (ElementHasLogBeforeNestedDecision(child))
+                    return true;
+            }
+            return false;
+        }
+
+        private static XElement? GetFlowStepNextTarget(XDocument doc, XElement flowStep)
+        {
+            var nextProp = flowStep.Elements().FirstOrDefault(e => e.Name.LocalName == "FlowStep.Next");
+            if (nextProp == null) return null;
+
+            foreach (var c in nextProp.Elements())
+            {
+                string ln = c.Name.LocalName;
+                if (ln == "FlowStep" || ln == "FlowDecision" || ln == "FlowSwitch")
+                    return c;
+                if (ln == "Reference")
+                {
+                    string refId = (c.Value ?? "").Trim();
+                    return FindFlowNodeByXName(doc, refId);
+                }
+            }
+            return null;
         }
 
         private static string GetDisplayName(string blockContent)
@@ -728,11 +911,15 @@ namespace AnalyzerHelper.Rules
         private static List<(string Type, string Description, int InsertIndex)> FindBranchesMissingLogWithPosition(string content, string filePath)
         {
             var allFindings = new List<(string Type, string Description, int InsertIndex)>();
-            SearchRecursively(content, 0, allFindings);
+            SearchRecursively(content, 0, allFindings, content);
             return allFindings;
         }
 
-        private static void SearchRecursively(string content, int offset, List<(string Type, string Description, int InsertIndex)> allFindings)
+        private static void SearchRecursively(
+            string content,
+            int offset,
+            List<(string Type, string Description, int InsertIndex)> allFindings,
+            string fullFileContent)
         {
             if (string.IsNullOrWhiteSpace(content)) return;
 
@@ -754,24 +941,24 @@ namespace AnalyzerHelper.Rules
                 string displayName = GetDisplayNameFromOpenTag(searchableContent, blockStart);
                 string condition = GetConditionAttribute(block);
 
-                // Need prefix for property search
+                // Need actual tag name (with prefix) for property search
                 string actualTagName = GetActualTagNameFromBlock(block);
-                string prefix = actualTagName.Contains(":") ? actualTagName.Split(':')[0] : "";
 
                 var trueBranch = FindPropertyElement(block, blockStart + offset, actualTagName, "True");
                 if (trueBranch.Found)
                 {
-                    if (!HasLogActivity(trueBranch.InnerContent))
+                    // Validate log at this decision level only (until next FlowDecision/FlowSwitch)
+                    if (!HasFlowDecisionBranchLog(trueBranch.InnerContent, fullFileContent))
                         allFindings.Add(("FlowDecision", $"FlowDecision '{displayName}' [{condition}] – True branch", trueBranch.InsertIndex));
-                    SearchRecursively(trueBranch.InnerContent, trueBranch.InsertIndex, allFindings);
+                    SearchRecursively(trueBranch.InnerContent, trueBranch.InsertIndex, allFindings, fullFileContent);
                 }
 
                 var falseBranch = FindPropertyElement(block, blockStart + offset, actualTagName, "False");
                 if (falseBranch.Found)
                 {
-                    if (!HasLogActivity(falseBranch.InnerContent))
+                    if (!HasFlowDecisionBranchLog(falseBranch.InnerContent, fullFileContent))
                         allFindings.Add(("FlowDecision", $"FlowDecision '{displayName}' [{condition}] – False branch", falseBranch.InsertIndex));
-                    SearchRecursively(falseBranch.InnerContent, falseBranch.InsertIndex, allFindings);
+                    SearchRecursively(falseBranch.InnerContent, falseBranch.InsertIndex, allFindings, fullFileContent);
                 }
             }
 
@@ -785,9 +972,9 @@ namespace AnalyzerHelper.Rules
                 var defaultBranch = FindPropertyElement(block, blockStart + offset, actualTagName, "Default");
                 if (defaultBranch.Found)
                 {
-                    if (!HasLogActivity(defaultBranch.InnerContent))
+                    if (!HasFlowDecisionBranchLog(defaultBranch.InnerContent, fullFileContent))
                         allFindings.Add(("FlowSwitch", $"FlowSwitch '{displayName}' – Default branch", defaultBranch.InsertIndex));
-                    SearchRecursively(defaultBranch.InnerContent, defaultBranch.InsertIndex, allFindings);
+                    SearchRecursively(defaultBranch.InnerContent, defaultBranch.InsertIndex, allFindings, fullFileContent);
                 }
 
                 var caseSteps = FindBalancedBlocks(block, "FlowStep");
@@ -799,7 +986,7 @@ namespace AnalyzerHelper.Rules
                     int tagEnd = caseBlock.IndexOf('>');
                     int absoluteInsertIndex = offset + blockStart + caseStart + tagEnd + 1;
 
-                    if (!HasLogActivity(caseBlock))
+                    if (!HasFlowDecisionBranchLog(caseBlock, fullFileContent))
                     {
                         var keyMatch = Regex.Match(caseBlock, @"x:Key\s*=\s*[""']([^""']*)[""']", RegexOptions.IgnoreCase);
                         string key = keyMatch.Success ? keyMatch.Groups[1].Value : caseIndex.ToString();
@@ -807,7 +994,7 @@ namespace AnalyzerHelper.Rules
                     }
                     
                     // Always recurse into the case block (it's a FlowStep)
-                    SearchRecursively(caseBlock, absoluteInsertIndex - (tagEnd + 1) + caseStart, allFindings); // Wait, index calc needs care
+                    SearchRecursively(caseBlock, absoluteInsertIndex - (tagEnd + 1) + caseStart, allFindings, fullFileContent);
                     caseIndex++;
                 }
             }
@@ -845,7 +1032,7 @@ namespace AnalyzerHelper.Rules
                 {
                     if (!HasLogActivity(thenBranch.InnerContent))
                         allFindings.Add(("If", $"If '{displayName}' [{condition}] – Then branch", thenBranch.InsertIndex));
-                    SearchRecursively(thenBranch.InnerContent, thenBranch.InsertIndex, allFindings);
+                    SearchRecursively(thenBranch.InnerContent, thenBranch.InsertIndex, allFindings, fullFileContent);
                 }
 
                 var elseBranch = FindPropertyElement(block, blockStart + offset, actualTagName, "Else");
@@ -853,7 +1040,7 @@ namespace AnalyzerHelper.Rules
                 {
                     if (!HasLogActivity(elseBranch.InnerContent))
                         allFindings.Add(("If", $"If '{displayName}' [{condition}] – Else branch", elseBranch.InsertIndex));
-                    SearchRecursively(elseBranch.InnerContent, elseBranch.InsertIndex, allFindings);
+                    SearchRecursively(elseBranch.InnerContent, elseBranch.InsertIndex, allFindings, fullFileContent);
                 }
             }
         }

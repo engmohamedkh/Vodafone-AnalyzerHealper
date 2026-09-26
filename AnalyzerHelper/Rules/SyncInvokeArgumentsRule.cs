@@ -11,238 +11,176 @@ using AnalyzerHelper.Models;
 namespace AnalyzerHelper.Rules
 {
     /// <summary>
-    /// Scans every &lt;ui:InvokeWorkflowFile&gt; in the current XAML and compares
-    /// the argument keys it passes against what the target .xaml file actually
-    /// declares in its &lt;x:Members&gt; section.
+    /// VF-020 — Keep InvokeWorkflowFile argument lists in sync with the invoked XAML.
     ///
-    /// Fix (DefineAndFix):
-    ///   • MISSING args  – adds an empty &lt;InArgument&gt; / &lt;OutArgument&gt; binding
-    ///                     so UiPath no longer shows "needs refresh".
-    ///   • EXTRA (stale) args – removes argument entries whose key no longer
-    ///                     exists in the target workflow.
+    /// Autofix (refresh):
+    ///   • Target workflow gained new x:Property args → add empty bindings on the invoke
+    ///   • Target workflow removed args → remove stale bindings from the invoke
     ///
-    /// Check:
-    ///   • One RuleCheckResult row per argument whose value is empty / self-closing / {x:Null}
-    ///     AFTER all add/remove fixes would be applied.
-    ///     Message includes: Invoke Display Name, Workflow File, Argument Name, Type, Direction.
+    /// Validate / report:
+    ///   • Out-of-sync invoke (missing or stale keys) → Error
+    ///   • Argument present but not assigned (empty / {x:Null}) → Error so developer wires it
     /// </summary>
     public sealed class SyncInvokeArgumentsRule : IAnalyzerRuleWithFix
     {
         public string RuleId => "VF-020";
         public string RuleName => "SyncInvokeArguments";
         public string DefaultRecommendation =>
-            "Sync InvokeWorkflowFile arguments with the target workflow's declared arguments. " +
-            "Wire empty arguments to the appropriate variables.";
+            "Refresh InvokeWorkflowFile arguments to match the target workflow, then wire any empty arguments.";
         public bool RequiresUserInteraction => false;
 
-        // ── Namespaces ────────────────────────────────────────────────────────
-        private static readonly XNamespace _actNs =
+        private static readonly XNamespace ActNs =
             XNamespace.Get("http://schemas.microsoft.com/netfx/2009/xaml/activities");
-        private static readonly XNamespace _uiNs =
-            XNamespace.Get("http://s...content-available-to-author-only...h.com/workflow/activities");
-        private static readonly XNamespace _xNs =
+        private static readonly XNamespace UiNs =
+            XNamespace.Get("http://schemas.uipath.com/workflow/activities");
+        private static readonly XNamespace XNs =
             XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml");
-
-        // =====================================================================
-        //  Check  (report only — no mutation)
-        //  Returns one result per empty/unwired argument in each invoke,
-        //  after simulating the add-missing / remove-stale sync.
-        // =====================================================================
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
         {
             var results = new List<RuleCheckResult>();
             if (string.IsNullOrWhiteSpace(content)) return results;
+            if (content.IndexOf("InvokeWorkflowFile", StringComparison.OrdinalIgnoreCase) < 0)
+                return results;
 
-            XDocument doc;
-            try { doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace); }
-            catch { return results; }
+            if (!TryLoad(content, out var doc) || doc == null)
+                return results;
 
             string fileDir = Path.GetDirectoryName(filePath) ?? "";
 
-            foreach (var invokeEl in doc.Descendants(_uiNs + "InvokeWorkflowFile"))
+            foreach (var invokeEl in EnumerateInvokes(doc))
             {
                 string displayName = GetAttr(invokeEl, "DisplayName") ?? "unnamed";
                 string relPath = GetAttr(invokeEl, "WorkflowFileName") ?? "";
                 if (string.IsNullOrWhiteSpace(relPath)) continue;
 
-                string targetAbs = ResolveTarget(fileDir, relPath);
-                if (targetAbs == null || !File.Exists(targetAbs)) continue;
+                string? targetAbs = ResolveTarget(fileDir, relPath);
+                if (targetAbs == null || !File.Exists(targetAbs))
+                {
+                    results.Add(MakeResult(filePath, RuleLevel.Warning,
+                        $"Invoke \"{displayName}\" target workflow not found: \"{relPath}\".",
+                        "Check WorkflowFileName path relative to the project root (project.json)."));
+                    continue;
+                }
 
                 var targetArgs = ReadTargetArgs(targetAbs);
-                if (targetArgs == null) continue;
+                if (targetArgs == null)
+                {
+                    results.Add(MakeResult(filePath, RuleLevel.Warning,
+                        $"Invoke \"{displayName}\" — could not read arguments from \"{relPath}\".",
+                        "Ensure the target XAML is valid and declares arguments in x:Members."));
+                    continue;
+                }
 
-                // Build what the invoke would look like AFTER sync
-                var argsContainer = invokeEl
-                    .Elements(_uiNs + "InvokeWorkflowFile.Arguments")
-                    .FirstOrDefault();
-
-                var currentKeys = new Dictionary<string, XElement>(StringComparer.Ordinal);
-                if (argsContainer != null)
-                    foreach (var argEl in argsContainer.Elements())
-                    {
-                        string key = GetAttr(argEl, "Key");
-                        if (!string.IsNullOrEmpty(key))
-                            currentKeys[key] = argEl;
-                    }
-
+                var currentKeys = ReadInvokeArgElements(invokeEl);
                 var targetKeySet = new HashSet<string>(targetArgs.Keys, StringComparer.Ordinal);
                 var currentKeySet = new HashSet<string>(currentKeys.Keys, StringComparer.Ordinal);
 
                 var missing = targetKeySet.Except(currentKeySet).OrderBy(k => k).ToList();
                 var extra = currentKeySet.Except(targetKeySet).OrderBy(k => k).ToList();
 
-                // Report missing args (they will become empty bindings after fix)
+                // Out of sync with saved target — needs refresh (autofix)
                 foreach (string key in missing)
                 {
                     var info = targetArgs[key];
-                    string direction = info.IsOut ? "Out" : "In";
-                    results.Add(new RuleCheckResult
-                    {
-                        RuleId = RuleId,
-                        RuleName = RuleName,
-                        Level = RuleLevel.Error,
-                        Message = $"Empty invoke argument — Invoke: \"{displayName}\", " +
-                                  $"Workflow: \"{relPath}\", " +
-                                  $"Arg: \"{key}\", Type: {info.XType}, Direction: {direction} (missing, will be added empty).",
-                        FilePath = filePath,
-                        Recommendation = "Add the missing argument to the InvokeWorkflowFile and wire it to the appropriate variable.",
-                        RequiresUserInteraction = RequiresUserInteraction
-                    });
+                    results.Add(MakeResult(filePath, RuleLevel.Error,
+                        $"Invoke out of sync — missing arg on invoke — Invoke: \"{displayName}\", " +
+                        $"Workflow: \"{relPath}\", Arg: \"{key}\", Type: {info.XType}, Direction: {info.Direction}. " +
+                        "Target was updated; refresh the invoke (autofix), then assign a value.",
+                        "Apply autofix to sync arguments, then wire the new argument."));
                 }
 
-                // Report currently-existing args that are empty (excluding stale ones)
-                foreach (var kvp in currentKeys)
-                {
-                    string key = kvp.Key;
-                    XElement argEl = kvp.Value;
-
-                    // Skip stale args — they'll be removed by fix
-                    if (extra.Contains(key)) continue;
-
-                    if (!IsEmptyArg(argEl)) continue;
-
-                    string localName = argEl.Name.LocalName;
-                    string typeArg = GetAttr(argEl, "TypeArguments") ?? "";
-                    string direction = localName.StartsWith("Out", StringComparison.OrdinalIgnoreCase)
-                        ? "Out" : "In";
-
-                    results.Add(new RuleCheckResult
-                    {
-                        RuleId = RuleId,
-                        RuleName = RuleName,
-                        Level = RuleLevel.Warning,
-                        Message = $"Empty invoke argument — Invoke: \"{displayName}\", " +
-                                  $"Workflow: \"{relPath}\", " +
-                                  $"Arg: \"{key}\", Type: {typeArg}, Direction: {direction}.",
-                        FilePath = filePath,
-                        Recommendation = "Wire the empty argument to the appropriate variable or value.",
-                        RequiresUserInteraction = RequiresUserInteraction
-                    });
-                }
-
-                // Report stale args that will be removed
                 foreach (string key in extra)
                 {
-                    results.Add(new RuleCheckResult
+                    results.Add(MakeResult(filePath, RuleLevel.Error,
+                        $"Invoke out of sync — stale arg on invoke — Invoke: \"{displayName}\", " +
+                        $"Workflow: \"{relPath}\", Arg: \"{key}\". " +
+                        "Argument no longer exists on the target workflow.",
+                        "Apply autofix to remove the stale argument."));
+                }
+
+                // Present on invoke but not assigned — developer must fill (not autofilled with a value)
+                foreach (var kvp in currentKeys)
+                {
+                    if (extra.Contains(kvp.Key)) continue; // will be removed by sync
+                    if (!IsEmptyArg(kvp.Value)) continue;
+
+                    string typeArg = GetAttr(kvp.Value, "TypeArguments") ?? "";
+                    string direction = DirectionFromElement(kvp.Value);
+                    if (targetArgs.TryGetValue(kvp.Key, out var info))
                     {
-                        RuleId = RuleId,
-                        RuleName = RuleName,
-                        Level = RuleLevel.Error,
-                        Message = $"Stale invoke argument (will be removed) — Invoke: \"{displayName}\", " +
-                                  $"Workflow: \"{relPath}\", Arg: \"{key}\".",
-                        FilePath = filePath,
-                        Recommendation = "Remove the stale argument that no longer exists in the target workflow.",
-                        RequiresUserInteraction = RequiresUserInteraction
-                    });
+                        typeArg = string.IsNullOrEmpty(typeArg) ? info.XType : typeArg;
+                        direction = info.Direction;
+                    }
+
+                    results.Add(MakeResult(filePath, RuleLevel.Error,
+                        $"Missing argument assignment — Invoke: \"{displayName}\", " +
+                        $"Workflow: \"{relPath}\", Arg: \"{kvp.Key}\", Type: {typeArg}, Direction: {direction}.",
+                        "Open the invoke and assign a variable/value to this argument."));
                 }
             }
 
             return results;
         }
 
-        // =====================================================================
-        //  DefineAndFix  (detect + fix — operates on content string)
-        //  Adds missing args (empty binding), removes stale args.
-        // =====================================================================
-
         public bool DefineAndFix(string filePath, string content, out string newContent)
         {
             newContent = content;
             if (string.IsNullOrWhiteSpace(content)) return false;
+            if (content.IndexOf("InvokeWorkflowFile", StringComparison.OrdinalIgnoreCase) < 0)
+                return false;
 
-            XDocument doc;
-            try { doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace); }
-            catch { return false; }
+            if (!TryLoad(content, out var doc) || doc == null)
+                return false;
 
             string fileDir = Path.GetDirectoryName(filePath) ?? "";
             bool docChanged = false;
 
-            foreach (var invokeEl in doc.Descendants(_uiNs + "InvokeWorkflowFile").ToList())
+            foreach (var invokeEl in EnumerateInvokes(doc).ToList())
             {
-                string relPath = GetAttr(invokeEl, "WorkflowFileName");
+                string? relPath = GetAttr(invokeEl, "WorkflowFileName");
                 if (string.IsNullOrWhiteSpace(relPath)) continue;
 
-                // ── Resolve target path ───────────────────────────────────
-                string targetAbs = ResolveTarget(fileDir, relPath);
+                string? targetAbs = ResolveTarget(fileDir, relPath!);
                 if (targetAbs == null || !File.Exists(targetAbs)) continue;
 
-                // ── Read what the target workflow declares ─────────────────
                 var targetArgs = ReadTargetArgs(targetAbs);
                 if (targetArgs == null) continue;
 
-                // ── Read what this invoke currently passes ─────────────────
-                var argsContainer = invokeEl
-                    .Elements(_uiNs + "InvokeWorkflowFile.Arguments")
-                    .FirstOrDefault();
+                var argsContainer = GetOrCreateArgsContainer(invokeEl);
+                var currentKeys = ReadInvokeArgElements(invokeEl);
 
-                var currentKeys = new Dictionary<string, XElement>(StringComparer.Ordinal);
-                if (argsContainer != null)
-                    foreach (var argEl in argsContainer.Elements())
-                    {
-                        string key = GetAttr(argEl, "Key");
-                        if (!string.IsNullOrEmpty(key))
-                            currentKeys[key] = argEl;
-                    }
-
-                // ── Diff ───────────────────────────────────────────────────
                 var targetKeySet = new HashSet<string>(targetArgs.Keys, StringComparer.Ordinal);
                 var currentKeySet = new HashSet<string>(currentKeys.Keys, StringComparer.Ordinal);
 
                 var missing = targetKeySet.Except(currentKeySet).OrderBy(k => k).ToList();
                 var extra = currentKeySet.Except(targetKeySet).OrderBy(k => k).ToList();
 
-                // ── Fix: add missing args ─────────────────────────────────
-                if (missing.Count > 0)
+                // Add missing (refresh)
+                XElement insertParent = GetArgInsertParent(argsContainer);
+                foreach (string key in missing)
                 {
-                    if (argsContainer == null)
-                    {
-                        argsContainer = new XElement(_uiNs + "InvokeWorkflowFile.Arguments");
-                        invokeEl.AddFirst(argsContainer);
-                    }
-                    foreach (string key in missing)
-                    {
-                        var info = targetArgs[key];
-                        string elem = info.IsOut ? "OutArgument" : "InArgument";
+                    var info = targetArgs[key];
+                    string elemName = info.ElementName; // InArgument / OutArgument / InOutArgument
 
-                        var newArg = new XElement(_actNs + elem,
-                            new XAttribute(_xNs + "TypeArguments", info.XType),
-                            new XAttribute(_xNs + "Key", key));
+                    var newArg = new XElement(ActNs + elemName,
+                        new XAttribute(XNs + "TypeArguments", info.XType),
+                        new XAttribute(XNs + "Key", key));
 
-                        argsContainer.Add(new XText("  "));
-                        argsContainer.Add(newArg);
+                    insertParent.Add(new XText(Environment.NewLine + "  "));
+                    insertParent.Add(newArg);
+                    docChanged = true;
+                }
+
+                // Remove stale
+                foreach (string key in extra)
+                {
+                    if (currentKeys.TryGetValue(key, out var staleEl))
+                    {
+                        RemoveClean(staleEl);
                         docChanged = true;
                     }
                 }
-
-                // ── Fix: remove stale (extra) args ────────────────────────
-                if (extra.Count > 0 && argsContainer != null)
-                    foreach (string key in extra)
-                        if (currentKeys.TryGetValue(key, out var staleEl))
-                        {
-                            RemoveClean(staleEl);
-                            docChanged = true;
-                        }
             }
 
             if (!docChanged) return false;
@@ -251,123 +189,183 @@ namespace AnalyzerHelper.Rules
             return newContent != content;
         }
 
-        // =====================================================================
-        //  IsEmptyArg — true when the argument element carries no real value
-        // =====================================================================
+        // ── Invoke / argument discovery (LocalName — resilient to xmlns prefix) ──
 
-        private static bool IsEmptyArg(XElement argEl)
+        private static IEnumerable<XElement> EnumerateInvokes(XDocument doc) =>
+            doc.Descendants().Where(e =>
+                e.Name.LocalName.Equals("InvokeWorkflowFile", StringComparison.OrdinalIgnoreCase));
+
+        private static XElement? FindArgsContainer(XElement invokeEl) =>
+            invokeEl.Elements().FirstOrDefault(e =>
+                e.Name.LocalName.Equals("InvokeWorkflowFile.Arguments", StringComparison.OrdinalIgnoreCase));
+
+        private static XElement GetOrCreateArgsContainer(XElement invokeEl)
         {
-            // Has child elements → has a nested binding → not empty
-            if (argEl.HasElements) return false;
+            var existing = FindArgsContainer(invokeEl);
+            if (existing != null) return existing;
 
-            string text = argEl.Value; // empty string for self-closing elements
-
-            if (string.IsNullOrWhiteSpace(text)) return true;
-            if (text.Equals("{x:Null}", StringComparison.OrdinalIgnoreCase)) return true;
-            if (text.Equals("[]", StringComparison.Ordinal)) return true;
-
-            return false;
+            var created = new XElement(UiNs + "InvokeWorkflowFile.Arguments");
+            invokeEl.AddFirst(created);
+            return created;
         }
 
-        // =====================================================================
-        //  Read target workflow's x:Members declarations
-        // =====================================================================
-
-        private static Dictionary<string, ArgInfo> ReadTargetArgs(string path)
+        /// <summary>Parent that directly holds InArgument/OutArgument (container or inner Dictionary).</summary>
+        private static XElement GetArgInsertParent(XElement argsContainer)
         {
-            string xml;
-            try { xml = File.ReadAllText(path); }
-            catch { return null; }
+            var dict = argsContainer.Elements()
+                .FirstOrDefault(e => e.Name.LocalName.Equals("Dictionary", StringComparison.OrdinalIgnoreCase));
+            return dict ?? argsContainer;
+        }
 
-            XDocument doc;
-            try { doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace); }
-            catch { return null; }
+        private static Dictionary<string, XElement> ReadInvokeArgElements(XElement invokeEl)
+        {
+            var result = new Dictionary<string, XElement>(StringComparer.Ordinal);
+            var argsContainer = FindArgsContainer(invokeEl);
+            if (argsContainer == null) return result;
 
-            var result = new Dictionary<string, ArgInfo>(StringComparer.Ordinal);
-            var members = doc.Descendants(_xNs + "Members").FirstOrDefault();
-            if (members == null) return result;
-
-            foreach (var prop in members.Elements(_xNs + "Property"))
+            foreach (var argEl in EnumerateArgElements(argsContainer))
             {
-                string name = (string)prop.Attribute("Name");
-                string type = (string)prop.Attribute("Type");
-                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type)) continue;
-
-                bool isOut = type.StartsWith("OutArgument", StringComparison.OrdinalIgnoreCase);
-
-                string xType = "x:Object";
-                int paren = type.IndexOf('(');
-                if (paren >= 0)
-                {
-                    int close = type.LastIndexOf(')');
-                    if (close > paren)
-                        xType = type.Substring(paren + 1, close - paren - 1);
-                }
-
-                result[name] = new ArgInfo { IsOut = isOut, XType = xType };
+                string? key = GetAttr(argEl, "Key");
+                if (!string.IsNullOrEmpty(key))
+                    result[key!] = argEl;
             }
 
             return result;
         }
 
-        // =====================================================================
-        //  Helpers
-        // =====================================================================
+        private static IEnumerable<XElement> EnumerateArgElements(XElement argsContainer)
+        {
+            foreach (var child in argsContainer.Elements())
+            {
+                if (IsArgumentElement(child))
+                {
+                    yield return child;
+                    continue;
+                }
 
-        /// <summary>
-        /// Resolves the WorkflowFileName path. UiPath stores these paths
-        /// relative to the **project root** (where project.json lives),
-        /// not relative to the invoking file's directory.
-        /// Falls back to fileDir if no project root is found.
-        /// </summary>
-        private static string ResolveTarget(string fileDir, string relPath)
+                // Newer layouts wrap arguments in scg:Dictionary
+                if (child.Name.LocalName.Equals("Dictionary", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var nested in child.Elements().Where(IsArgumentElement))
+                        yield return nested;
+                }
+            }
+        }
+
+        private static bool IsArgumentElement(XElement el)
+        {
+            string ln = el.Name.LocalName;
+            return ln.Equals("InArgument", StringComparison.OrdinalIgnoreCase)
+                || ln.Equals("OutArgument", StringComparison.OrdinalIgnoreCase)
+                || ln.Equals("InOutArgument", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsEmptyArg(XElement argEl)
+        {
+            if (argEl.HasElements) return false;
+
+            string text = argEl.Value;
+            if (string.IsNullOrWhiteSpace(text)) return true;
+            if (text.Equals("{x:Null}", StringComparison.OrdinalIgnoreCase)) return true;
+            if (text.Equals("[]", StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        private static string DirectionFromElement(XElement argEl)
+        {
+            string ln = argEl.Name.LocalName;
+            if (ln.StartsWith("InOut", StringComparison.OrdinalIgnoreCase)) return "InOut";
+            if (ln.StartsWith("Out", StringComparison.OrdinalIgnoreCase)) return "Out";
+            return "In";
+        }
+
+        // ── Target workflow x:Members ─────────────────────────────────────────
+
+        /// <summary>Null = unreadable / no Members section (do not treat as empty arg list).</summary>
+        private static Dictionary<string, ArgInfo>? ReadTargetArgs(string path)
+        {
+            string xml;
+            try { xml = File.ReadAllText(path); }
+            catch { return null; }
+
+            if (!TryLoad(xml, out var doc) || doc == null)
+                return null;
+
+            var members = doc.Descendants()
+                .FirstOrDefault(e => e.Name.LocalName.Equals("Members", StringComparison.OrdinalIgnoreCase));
+            if (members == null)
+                return null;
+
+            var result = new Dictionary<string, ArgInfo>(StringComparer.Ordinal);
+            foreach (var prop in members.Elements()
+                         .Where(e => e.Name.LocalName.Equals("Property", StringComparison.OrdinalIgnoreCase)))
+            {
+                string? name = GetAttr(prop, "Name");
+                string? type = GetAttr(prop, "Type");
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type)) continue;
+
+                result[name!] = ArgInfo.FromPropertyType(type!);
+            }
+
+            return result;
+        }
+
+        // ── Path resolution ───────────────────────────────────────────────────
+
+        private static string? ResolveTarget(string fileDir, string relPath)
         {
             try
             {
                 string norm = relPath.Replace('/', Path.DirectorySeparatorChar)
                                      .Replace('\\', Path.DirectorySeparatorChar);
 
-                // Walk up from the file's directory to find the project root
-                string projectRoot = FindProjectRoot(fileDir);
+                string? projectRoot = FindProjectRoot(fileDir);
                 string baseDir = projectRoot ?? fileDir;
 
                 string resolved = Path.GetFullPath(Path.Combine(baseDir, norm));
                 if (File.Exists(resolved)) return resolved;
 
-                // Fallback: try relative to fileDir (for edge cases)
                 if (projectRoot != null)
                 {
                     string fallback = Path.GetFullPath(Path.Combine(fileDir, norm));
                     if (File.Exists(fallback)) return fallback;
                 }
 
-                return resolved; // Return the project-root-based path even if not found yet
+                return resolved;
             }
             catch { return null; }
         }
 
-        /// <summary>
-        /// Walks up from a directory to find the UiPath project root
-        /// (the directory containing project.json).
-        /// </summary>
-        private static string FindProjectRoot(string startDir)
+        private static string? FindProjectRoot(string startDir)
         {
-            string dir = startDir;
+            string? dir = startDir;
             while (!string.IsNullOrEmpty(dir))
             {
                 if (File.Exists(Path.Combine(dir, "project.json")))
                     return dir;
-                string parent = Path.GetDirectoryName(dir);
-                if (parent == dir) break; // root reached
+                string? parent = Path.GetDirectoryName(dir);
+                if (parent == dir) break;
                 dir = parent;
             }
             return null;
         }
 
-        /// <summary>Attribute lookup by local name — namespace-agnostic.</summary>
-        private static string GetAttr(XElement el, string localName)
-            => el.Attributes()
-                 .FirstOrDefault(a => a.Name.LocalName == localName)?.Value;
+        // ── Helpers ───────────────────────────────────────────────────────────
+
+        private RuleCheckResult MakeResult(string filePath, RuleLevel level, string message, string recommendation) =>
+            new RuleCheckResult
+            {
+                RuleId = RuleId,
+                RuleName = RuleName,
+                Level = level,
+                Message = message,
+                FilePath = filePath,
+                Recommendation = recommendation,
+                RequiresUserInteraction = RequiresUserInteraction
+            };
+
+        private static string? GetAttr(XElement el, string localName) =>
+            el.Attributes().FirstOrDefault(a => a.Name.LocalName == localName)?.Value;
 
         private static void RemoveClean(XElement el)
         {
@@ -376,9 +374,19 @@ namespace AnalyzerHelper.Rules
             el.Remove();
         }
 
-        // =====================================================================
-        //  Serialisation
-        // =====================================================================
+        private static bool TryLoad(string content, out XDocument? doc)
+        {
+            try
+            {
+                doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace);
+                return true;
+            }
+            catch
+            {
+                doc = null;
+                return false;
+            }
+        }
 
         private static string Serialise(XDocument doc, string original)
         {
@@ -397,22 +405,47 @@ namespace AnalyzerHelper.Rules
                 doc.Save(xw);
 
             string body = sb.ToString();
-            if (original.TrimStart().StartsWith("<?xml"))
+            if (original.TrimStart().StartsWith("<?xml", StringComparison.Ordinal))
             {
                 int end = original.IndexOf("?>", StringComparison.Ordinal) + 2;
-                body = original.Substring(0, end) + (crlf ? "\r\n" : "\n") + body;
+                if (end >= 2)
+                    body = original.Substring(0, end) + (crlf ? "\r\n" : "\n") + body;
             }
             return body;
         }
 
-        // =====================================================================
-        //  Data models
-        // =====================================================================
-
-        private class ArgInfo
+        private sealed class ArgInfo
         {
-            public bool IsOut { get; set; }
-            public string XType { get; set; }
+            public string Direction { get; init; } = "In";
+            public string ElementName { get; init; } = "InArgument";
+            public string XType { get; init; } = "x:Object";
+
+            public static ArgInfo FromPropertyType(string type)
+            {
+                string direction = "In";
+                string element = "InArgument";
+                if (type.StartsWith("InOutArgument", StringComparison.OrdinalIgnoreCase))
+                {
+                    direction = "InOut";
+                    element = "InOutArgument";
+                }
+                else if (type.StartsWith("OutArgument", StringComparison.OrdinalIgnoreCase))
+                {
+                    direction = "Out";
+                    element = "OutArgument";
+                }
+
+                string xType = "x:Object";
+                int paren = type.IndexOf('(');
+                if (paren >= 0)
+                {
+                    int close = type.LastIndexOf(')');
+                    if (close > paren)
+                        xType = type.Substring(paren + 1, close - paren - 1);
+                }
+
+                return new ArgInfo { Direction = direction, ElementName = element, XType = xType };
+            }
         }
     }
 }

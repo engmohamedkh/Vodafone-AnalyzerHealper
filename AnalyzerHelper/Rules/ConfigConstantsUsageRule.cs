@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,7 +13,7 @@ namespace AnalyzerHelper.Rules
     {
         public string RuleId => "VF-022";
         public string RuleName => "Config Constants Usage";
-        public string DefaultRecommendation => "Ensure all Config dictionaries use valid keys mapped to correct sheets, and unused Config values are reviewed.";
+        public string DefaultRecommendation => "Ensure all Config dictionaries use valid keys mapped to correct sheets.";
         public bool RequiresUserInteraction => false;
 
         private static string _lastAnalyzedProjectRoot = null;
@@ -30,11 +29,6 @@ namespace AnalyzerHelper.Rules
             public string[] ExpectedCategories { get; set; }
             public string Key { get; set; }
         }
-        
-        // Maps DictName -> XamlKeyUsage used in XAML
-        private static List<XamlKeyUsage> _allXamlKeys = new List<XamlKeyUsage>();
-        
-        private static List<RuleCheckResult> _projectWideResults = new List<RuleCheckResult>();
 
         // We use a regex to match: dictName("KeyName") or in_dictName("KeyName") etc.
         // Group 1: Dictionary Name, Group 2: Key
@@ -57,14 +51,12 @@ namespace AnalyzerHelper.Rules
                 _lastAnalyzedTime = DateTime.Now;
                 _configNotFoundBoxShown = false;
                 _configKeysByCategory.Clear();
-                _allXamlKeys.Clear();
-                _projectWideResults.Clear();
 
                 AnalyzeProject(projectRoot);
             }
 
-            // Report logic:
-            // 1. Missing from config or wrong dictionary (Errors)
+            // Validate/report only: check keys used in this file against Config.xlsx.
+            // Do not report unused config keys — validation may target a subset of files.
             var localXamlKeys = ExtractKeysFromXaml(content);
             foreach (var item in localXamlKeys)
             {
@@ -113,13 +105,6 @@ namespace AnalyzerHelper.Rules
                         }
                     }
                 }
-            }
-
-            // 2. Unused config keys
-            if (_projectWideResults.Count > 0)
-            {
-                results.AddRange(_projectWideResults);
-                _projectWideResults.Clear();
             }
 
             return results;
@@ -220,41 +205,6 @@ namespace AnalyzerHelper.Rules
             }
             catch (Exception)
             {
-            }
-
-            // 2. Read all XAML files to find all used keys
-            try
-            {
-                var xamlFiles = Directory.GetFiles(projectRoot, "*.xaml", SearchOption.AllDirectories);
-                foreach (var xf in xamlFiles)
-                {
-                    string text = File.ReadAllText(xf);
-                    var keys = ExtractKeysFromXaml(text);
-                    _allXamlKeys.AddRange(keys);
-                }
-            }
-            catch { }
-
-            // 3. Find unused config keys
-            foreach (var kvp in _configKeysByCategory)
-            {
-                string cat = kvp.Key;
-                foreach (var cfgKey in kvp.Value)
-                {
-                    bool isUsed = _allXamlKeys.Any(x => x.ExpectedCategories.Contains(cat, StringComparer.OrdinalIgnoreCase) && x.Key.Equals(cfgKey, StringComparison.OrdinalIgnoreCase));
-                    if (!isUsed)
-                    {
-                        _projectWideResults.Add(new RuleCheckResult
-                        {
-                            RuleId = RuleId,
-                            RuleName = RuleName,
-                            Level = RuleLevel.Info,
-                            Message = $"Config key '{cfgKey}' is defined in a '{cat}' sheet but never used in XAML files by a matching dictionary.",
-                            FilePath = configPath,
-                            Recommendation = "Remove unused keys to clean up Config.xlsx."
-                        });
-                    }
-                }
             }
         }
 

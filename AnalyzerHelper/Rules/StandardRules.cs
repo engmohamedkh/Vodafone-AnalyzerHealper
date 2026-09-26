@@ -18,6 +18,7 @@ namespace AnalyzerHelper.Rules
             new FixComponentNameRule(),
             new FlowchartOrphanNodesRule(),
             new CetTimeZoneRule(),
+            new LogBrowserUrlRule(),
 
             // Need interaction
             new HandleCommentedActivitiesRule(),
