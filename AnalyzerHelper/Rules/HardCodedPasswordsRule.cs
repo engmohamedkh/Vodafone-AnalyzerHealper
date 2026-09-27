@@ -17,9 +17,9 @@ namespace AnalyzerHelper.Rules
             "Do not use hardcoded passwords. Prefer SecureString from Orchestrator/Config credentials.";
         public bool RequiresUserInteraction => false;
 
-        // Config credential dictionary: crddctroboCred("key").SecureString (optional in_/io_/out_ prefix)
+        // Config credential dictionary or approved password variable/argument (e.g. crddctroboCred, strCitrixPassword, in_strPassword)
         private static readonly Regex ConfigCredentialRegex = new Regex(
-            @"\b(?:in_|io_|out_)?crddctroboCred\s*\(",
+            @"\b(?:in_|io_|out_)?(?:crddctroboCred\s*\(|str_?\w*password\b)",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public IReadOnlyList<RuleCheckResult> Check(string filePath, string content)
@@ -42,7 +42,7 @@ namespace AnalyzerHelper.Rules
                     string expr = attr.Value;
 
                     // Config credential SecureString is valid (reusable components often bind Password = crddctroboCred("key").SecureString)
-                    if (IsConfigCredentialExpression(expr))
+                    if (IsConfigCredentialExpression(expr) || IsApprovedStringVariableExpression(expr))
                         continue;
 
                     bool isSecureName = n.IndexOf("SecurePassword", StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -150,6 +150,16 @@ namespace AnalyzerHelper.Rules
                     string.Equals(a.Name.LocalName, "ExpressionText", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(a.Name.LocalName, "Value", StringComparison.OrdinalIgnoreCase));
             return valueAttr?.Value;
+        }
+
+        private static bool IsApprovedStringVariableExpression(string expr)
+        {
+            if (string.IsNullOrWhiteSpace(expr)) return false;
+            string trimmed = expr.Trim();
+            // Check if expression is a variable/argument reference (e.g. [strPassword] or strPassword without literal quotes)
+            bool isBracketVar = trimmed.StartsWith("[") && trimmed.EndsWith("]");
+            bool hasNoStringQuotes = !trimmed.StartsWith("\"") && !trimmed.EndsWith("\"");
+            return isBracketVar || hasNoStringQuotes;
         }
     }
 }
