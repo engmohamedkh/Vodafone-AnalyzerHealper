@@ -19,6 +19,7 @@ namespace AnalyzerHelper.Rules
             new FlowchartOrphanNodesRule(),
             new CetTimeZoneRule(),
             new LogBrowserUrlRule(),
+            new HardcodedArguments(),
 
             // Need interaction
             new HandleCommentedActivitiesRule(),
@@ -40,6 +41,9 @@ namespace AnalyzerHelper.Rules
             new MicrosoftOfficeActivitiesRule(),
             new HardCodedDelaysRule(),
             new NestedIfsRule(),
+            new SimulateAndSendWindowMessage(),
+            new IfElse(),
+            new AddLogFields(),
         };
 
         public static IReadOnlyList<IAnalyzerRule> GetAll() => AllRules;
