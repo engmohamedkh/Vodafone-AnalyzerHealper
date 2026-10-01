@@ -19,7 +19,7 @@ namespace AnalyzerHelper.Rules
     {
         private static readonly XNamespace XNs = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        public string RuleId => "VF-040";
+        public string RuleId => "VF-071";
         public string RuleName => "Unreachable Flowchart Nodes";
         public string DefaultRecommendation =>
             "Remove unreachable nodes from the Flowchart. Use Fix to auto-delete orphan nodes.";
@@ -122,7 +122,7 @@ namespace AnalyzerHelper.Rules
             return false;
         }
 
-        /// <summary>Removes top-level &lt;x:Reference&gt;…&lt;/x:Reference&gt; under the flowchart whose target was removed.</summary>
+        /// <summary>Removes top-level &lt;x:Reference&gt;ï¿½&lt;/x:Reference&gt; under the flowchart whose target was removed.</summary>
         private static bool RemoveDanglingFlowchartReferences(XElement flowchart, HashSet<string> removedIds)
         {
             if (removedIds.Count == 0) return false;

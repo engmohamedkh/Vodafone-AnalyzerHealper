@@ -19,7 +19,7 @@ namespace AnalyzerHelper.Rules
 	/// </summary>
 	public sealed class AnnotationRule : IBatchAnalyzerRuleWithFix
 	{
-		public string RuleId => "VF-017";
+		public string RuleId => "VF-033";
 		public string RuleName => "Workflow Annotations";
 		public string DefaultRecommendation =>
 			"Workflow annotation must contain all sections: Component Name, Description, Pre Condition, Post Condition, PDD Section. Use Fix to edit via the annotation dialog.";

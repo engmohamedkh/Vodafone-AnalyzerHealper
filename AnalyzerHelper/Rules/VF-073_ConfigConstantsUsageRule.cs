@@ -11,7 +11,7 @@ namespace AnalyzerHelper.Rules
 {
     public class ConfigConstantsUsageRule : IAnalyzerRule
     {
-        public string RuleId => "VF-022";
+        public string RuleId => "VF-073";
         public string RuleName => "Config Constants Usage";
         public string DefaultRecommendation => "Ensure all Config dictionaries use valid keys mapped to correct sheets.";
         public bool RequiresUserInteraction => false;

@@ -15,7 +15,7 @@ namespace AnalyzerHelper.Rules
     /// </summary>
     public sealed class UnusedWorkflowFilesRule : IBatchAnalyzerRuleWithFix
     {
-        public string RuleId => "VF-039";
+        public string RuleId => "VF-070";
         public string RuleName => "Unused workflow files";
         public string DefaultRecommendation =>
             "Remove unused workflows from Automation, Subprocess, and Logic or invoke them from another workflow.";

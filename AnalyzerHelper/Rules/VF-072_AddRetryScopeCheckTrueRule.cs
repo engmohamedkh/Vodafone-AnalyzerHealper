@@ -35,7 +35,7 @@ namespace AnalyzerHelper.Rules
     /// </summary>
     public sealed class AddRetryScopeCheckTrueRule : IAnalyzerRuleWithFix
     {
-        public string RuleId => "VF-014";
+        public string RuleId => "VF-072";
         public string RuleName => "Empty Retry Scope Condition";
         public string DefaultRecommendation =>
             "Add a CheckTrue with a condition to RetryScope.Condition blocks so the retry loop evaluates correctly.";
